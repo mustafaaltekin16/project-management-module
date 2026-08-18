@@ -1,0 +1,163 @@
+<section class="pg" aria-label="Proje rehberi">
+  <header class="pg-head">
+    <div class="pg-identity">
+      <span class="pg-avatar">PR</span>
+      <div>
+        <h2>Proje Rehberi</h2>
+        <p><i></i> Proje dokümanlarına bağlı</p>
+      </div>
+    </div>
+    <div class="pg-head-actions">
+      <div class="pg-source-summary" aria-label="Bağlı proje dokümanları">
+        <app-icon name="projects" [size]="15" />
+        <span><strong>{{ context.documents.length }}</strong> doküman bağlı</span>
+      </div>
+      <button
+        type="button"
+        class="pg-new-chat"
+        [disabled]="!messages().length"
+        (click)="startNewChat()"
+      >
+        <app-icon name="plus" [size]="14" />
+        <span>Yeni Sohbet</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="pg-layout">
+    <div class="pg-chat">
+      <div #conversation class="pg-conversation" aria-live="polite">
+        @if (!messages().length) {
+          <section class="pg-welcome" aria-labelledby="project-guide-welcome-title">
+            <span class="pg-welcome-avatar">PR</span>
+            <p class="pg-welcome-kicker">Proje Rehberi</p>
+            <h3 id="project-guide-welcome-title">Proje hakkında ne öğrenmek istersiniz?</h3>
+            <p class="pg-welcome-description">
+              @if (context.documents.length) {
+                Yüklenen {{ context.documents.length }} dokümanı kullanarak projenin kapsamını,
+                gereksinimlerini ve önemli tarihlerini inceleyebilirsiniz.
+              } @else {
+                Rehberin proje hakkında yanıt verebilmesi için Dokümanlar sekmesinden bir dosya ekleyin.
+              }
+            </p>
+
+            <div class="pg-suggestions" aria-label="Hızlı sorular">
+              @for (suggestion of suggestions; track suggestion; let index = $index) {
+                <button type="button" (click)="askSuggestion(suggestion)" [disabled]="sending()">
+                  <span class="pg-suggestion-index">{{ index + 1 }}</span>
+                  <span>{{ suggestion }}</span>
+                  <app-icon name="chevron-right" [size]="15" />
+                </button>
+              }
+            </div>
+          </section>
+        } @else {
+          <div class="pg-conversation-inner">
+            <div class="pg-date"><span>Proje görüşmesi</span></div>
+            @for (message of messages(); track message.id) {
+              <article class="pg-message" [class.is-visitor]="message.role === 'visitor'">
+                <span class="pg-message-avatar">{{ message.role === 'visitor' ? userInitials() : 'PR' }}</span>
+                <div class="pg-message-content">
+                  <header>
+                    <strong>{{ message.role === 'visitor' ? (currentUserName || 'Siz') : 'Proje Rehberi' }}</strong>
+                    <time>{{ message.time }}</time>
+                  </header>
+                  <p>{{ message.text }}</p>
+                  @if (message.sources.length) {
+                    <footer>
+                      <button
+                        type="button"
+                        class="pg-sources-toggle"
+                        [attr.aria-expanded]="isSourcesExpanded(message.id)"
+                        (click)="toggleSources(message.id)"
+                      >
+                        <app-icon [name]="isSourcesExpanded(message.id) ? 'chevron-down' : 'chevron-right'" [size]="12" />
+                        <span>Yanıtta kullanılan dokümanlar ({{ message.sources.length }})</span>
+                      </button>
+                      @if (isSourcesExpanded(message.id)) {
+                        <div class="pg-sources-list">
+                          @for (source of message.sources; track source) { <b>{{ source }}</b> }
+                        </div>
+                      }
+                    </footer>
+                  }
+                  @if (message.role === 'guide' && !message.usedRealDocumentContext) {
+                    <p class="pg-context-warning">
+                      <app-icon name="alert" [size]="13" /> Bu yanıt doküman içeriğine dayanmıyor.
+                    </p>
+                  }
+                </div>
+              </article>
+            }
+            @if (sending()) {
+              <article class="pg-message">
+                <span class="pg-message-avatar">PR</span>
+                <div class="pg-message-content pg-message-content--waiting">
+                  <span>Yanıt hazırlanıyor</span><i></i><i></i><i></i>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      <form class="pg-composer" (submit)="$event.preventDefault(); send()">
+        <div class="pg-composer-box">
+          <label>
+            <span class="sr-only">Proje dokümanları hakkında sorun</span>
+            <textarea
+              rows="1"
+              name="projectGuideQuestion"
+              maxlength="800"
+              placeholder="Proje dokümanları hakkında bir soru yazın…"
+              [ngModel]="draft()"
+              (ngModelChange)="draft.set($event)"
+              (keydown)="onComposerKeydown($event)"
+            ></textarea>
+          </label>
+          <button type="submit" [disabled]="sending() || !draft().trim()" aria-label="Mesajı gönder">
+            <app-icon name="send" [size]="18" />
+          </button>
+        </div>
+        <small>Enter ile gönder · Shift + Enter ile yeni satır</small>
+      </form>
+    </div>
+
+    <aside class="pg-aside" aria-label="Kullanılan kaynaklar">
+      <section class="pg-source-card">
+        <header>
+          <span><app-icon name="layers" [size]="17" /></span>
+          <div><strong>Kullanılan kaynaklar</strong><small>Bu görüşmenin bilgi kapsamı</small></div>
+        </header>
+
+        <div class="pg-source-total">
+          <strong>{{ context.documents.length }}</strong>
+          <span>doküman kullanılabilir</span>
+        </div>
+
+        @if (context.documents.length) {
+          <ul class="pg-document-list">
+            @for (document of context.documents; track document.name) {
+              <li>
+                <span class="pg-document-icon"><app-icon name="projects" [size]="15" /></span>
+                <div><strong [title]="document.name">{{ document.name }}</strong><small>{{ document.kind }} · {{ document.size }}</small></div>
+                <i class="is-ready" title="Kullanıma hazır"></i>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="pg-source-empty">
+            <app-icon name="projects" [size]="20" />
+            <strong>Henüz doküman yok</strong>
+            <span>Rehberin proje hakkında yanıt verebilmesi için Dokümanlar sekmesinden dosya ekleyin.</span>
+          </div>
+        }
+      </section>
+
+      <p class="pg-scope-note">
+        <app-icon name="help" [size]="15" />
+        <span>Yanıtlar yalnızca bu proje için yüklenen ve işlenebilen dokümanlar kullanılarak hazırlanır.</span>
+      </p>
+    </aside>
+  </div>
+</section>

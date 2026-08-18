@@ -1,0 +1,673 @@
+<main class="pm-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell pc-shell" aria-label="Yeni Proje Oluştur">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Organizasyon' ? goToDepartments() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Şablonlar' ? goToTemplates() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace pc-workspace">
+      <header class="pm-topbar pc-topbar">
+        <div class="pm-title-wrap">
+          <h1>Yeni Proje Oluştur</h1>
+          <button class="pm-icon-plain" type="button" aria-label="Sayfayı paylaş" title="Paylaş">
+            <app-icon name="share" [size]="19" />
+          </button>
+        </div>
+        <div class="pm-top-actions">
+          <button class="pm-top-icon" type="button" aria-label="Ara"><app-icon name="search" [size]="20" /></button>
+          <button class="pm-top-icon" type="button" aria-label="Yardım"><app-icon name="help" [size]="19" /></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Mesajlar"><app-icon name="mail" [size]="19" /><span>1</span></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler"><app-icon name="bell" [size]="19" /><span>3</span></button>
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="profileOpen.update((value) => !value)">
+              <strong>{{ currentUserName() }}</strong><span class="pm-avatar" aria-hidden="true">AG</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu">
+                <strong>{{ currentUserName() }}</strong>
+                <span>Proje Yöneticisi</span>
+                <button type="button" (click)="logout()">Oturumu Kapat</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+
+      <div class="pc-layout">
+        <form class="pc-main-card" [class.pc-main-card--multi]="mode() !== 'simple'" (ngSubmit)="save()">
+          <header class="pc-section-heading">
+            <div>
+              <h2>Proje Bilgileri</h2>
+              @if (selectedTemplate()) { <small>{{ selectedTemplate()!.name }} şablonu uygulanıyor</small> }
+            </div>
+            <div class="pc-mode-switch" aria-label="Proje yapısı">
+              <button type="button" [class.is-active]="mode() === 'simple'" (click)="setMode('simple')">Basit Proje</button>
+              <button type="button" [class.is-active]="mode() === 'multi'" (click)="setMode('multi')">Çok Birimli Proje</button>
+            </div>
+          </header>
+
+          <section class="pc-schema-form" aria-label="Proje form alanları">
+            @for (field of projectFormSchema(); track field.id) {
+              @if (normalizedFieldKind(field) === 'Section') {
+                <div class="pc-schema-section">
+                  <h3>{{ field.label }}</h3>
+                  @if (field.hint) { <p>{{ field.hint }}</p> }
+                </div>
+              } @else if (normalizedFieldKind(field) === 'System') {
+                @switch (field.systemKey) {
+                  @case ('projectName') {
+                    <label
+                      class="pc-field pc-schema-project-name"
+                      [class.has-error]="hasFieldError('projectName')"
+                      data-validation-key="projectName"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input
+                        type="text"
+                        name="projectName"
+                        [placeholder]="field.hint"
+                        [required]="field.isRequired"
+                        [attr.aria-invalid]="hasFieldError('projectName') ? 'true' : null"
+                        [ngModel]="projectName()"
+                        (ngModelChange)="updateProjectName($event)"
+                      />
+                      @if (fieldError('projectName'); as error) { <small class="pc-field-error">{{ error }}</small> }
+                    </label>
+                  }
+                  @case ('unit') {
+                    <label class="pc-field pc-schema-unit">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <select name="unitDepartmentId" [required]="field.isRequired" [ngModel]="unitDepartmentId()" (ngModelChange)="updateUnitDepartmentId($event)">
+                        <option value="">Birim seçiniz</option>
+                        @for (department of departmentCandidates(); track department.id) {
+                          <option [value]="department.id">{{ department.name }}</option>
+                        }
+                      </select>
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('startDate') {
+                    <label
+                      class="pc-field pc-schema-start-date"
+                      [class.has-error]="hasFieldError('startDate')"
+                      data-validation-key="startDate"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input
+                        type="date"
+                        name="startDate"
+                        [required]="field.isRequired"
+                        [attr.aria-invalid]="hasFieldError('startDate') ? 'true' : null"
+                        [ngModel]="startDate()"
+                        (ngModelChange)="updateStartDate($event)"
+                      />
+                      @if (fieldError('startDate'); as error) {
+                        <small class="pc-field-error">{{ error }}</small>
+                      } @else if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('endDate') {
+                    <label
+                      class="pc-field pc-schema-end-date"
+                      [class.has-error]="hasFieldError('endDate')"
+                      data-validation-key="endDate"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input
+                        type="date"
+                        name="endDate"
+                        [required]="field.isRequired"
+                        [attr.aria-invalid]="hasFieldError('endDate') ? 'true' : null"
+                        [ngModel]="endDate()"
+                        (ngModelChange)="updateEndDate($event)"
+                      />
+                      @if (fieldError('endDate'); as error) {
+                        <small class="pc-field-error">{{ error }}</small>
+                      } @else if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('description') {
+                    <label
+                      class="pc-field pc-schema-wide pc-schema-description"
+                      [class.has-error]="hasFieldError('description')"
+                      data-validation-key="description"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <textarea
+                        name="description"
+                        rows="4"
+                        [placeholder]="field.hint"
+                        [required]="field.isRequired"
+                        [attr.aria-invalid]="hasFieldError('description') ? 'true' : null"
+                        [ngModel]="description()"
+                        (ngModelChange)="updateDescription($event)"
+                      ></textarea>
+                      @if (fieldError('description'); as error) { <small class="pc-field-error">{{ error }}</small> }
+                    </label>
+                  }
+                  @case ('attachments') {
+                    <div class="pc-attachment pc-schema-wide pc-schema-attachments">
+                      <label>
+                        <app-icon name="paperclip" [size]="17" />
+                        <span>{{ field.label }}</span>
+                        <input type="file" multiple (change)="onFilesSelected($event)" />
+                      </label>
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                      @if (attachmentNames().length) { <span class="pc-attachment-count">{{ attachmentNames().length }} dosya seçildi</span> }
+                    </div>
+                  }
+                  @case ('manager') {
+                    <label
+                      class="pc-field pc-schema-manager"
+                      [class.has-error]="hasFieldError('managerEmployeeId')"
+                      data-validation-key="managerEmployeeId"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <span class="pc-manager-control">
+                        <span class="pc-person-select">
+                          <select
+                            name="managerEmployeeId"
+                            [required]="field.isRequired"
+                            [attr.aria-invalid]="hasFieldError('managerEmployeeId') ? 'true' : null"
+                            [ngModel]="managerEmployeeId()"
+                            (ngModelChange)="updateManagerEmployeeId($event)"
+                          >
+                            <option value="">Proje yöneticisi seçiniz</option>
+                            @for (employee of managerCandidates(); track employee.id) {
+                              <option [value]="employee.id">{{ employee.displayName }}</option>
+                            }
+                          </select>
+                        </span>
+                        @if (mode() === 'multi' && !showSecondManager()) {
+                          <button
+                            class="pc-manager-add"
+                            type="button"
+                            aria-label="İkinci proje yöneticisi ekle"
+                            title="İkinci proje yöneticisi ekle"
+                            (click)="addSecondManager()"
+                          >
+                            <app-icon name="plus" [size]="17" />
+                          </button>
+                        }
+                      </span>
+                      @if (fieldError('managerEmployeeId'); as error) {
+                        <small class="pc-field-error">{{ error }}</small>
+                      } @else if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('secondManager') {
+                    <label class="pc-field pc-schema-second-manager">
+                      <span>{{ field.label }}</span>
+                      <span class="pc-manager-control">
+                        <span class="pc-person-select">
+                          <select name="secondManagerEmployeeId" [ngModel]="secondManagerEmployeeId()" (ngModelChange)="updateSecondManagerEmployeeId($event)">
+                            <option value="">İkinci yönetici seçiniz</option>
+                            @for (employee of managerCandidates(); track employee.id) {
+                              <option [value]="employee.id">{{ employee.displayName }}</option>
+                            }
+                          </select>
+                        </span>
+                        <button
+                          class="pc-manager-remove"
+                          type="button"
+                          aria-label="İkinci proje yöneticisini kaldır"
+                          title="İkinci proje yöneticisini kaldır"
+                          (click)="removeSecondManager()"
+                        >
+                          ×
+                        </button>
+                      </span>
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('budget') {
+                    <label
+                      class="pc-field pc-schema-budget"
+                      [class.has-error]="hasFieldError('budget')"
+                      data-validation-key="budget"
+                    >
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <span class="pc-money">
+                        <input
+                          name="budget"
+                          [placeholder]="field.hint"
+                          [required]="field.isRequired"
+                          [attr.aria-invalid]="hasFieldError('budget') ? 'true' : null"
+                          [ngModel]="budget()"
+                          (ngModelChange)="updateBudget($event)"
+                        />
+                        <select name="currency" [ngModel]="currency()" (ngModelChange)="updateCurrency($event)"><option>₺</option><option>$</option><option>€</option></select>
+                      </span>
+                      @if (fieldError('budget'); as error) { <small class="pc-field-error">{{ error }}</small> }
+                    </label>
+                  }
+                }
+              } @else {
+                <div
+                  class="pc-template-field-shell"
+                  [class.pc-schema-wide]="isWideTemplateField(field)"
+                  [class.has-error]="hasFieldError(templateFieldErrorKey(field.id))"
+                  [attr.data-validation-key]="templateFieldErrorKey(field.id)"
+                  [attr.aria-invalid]="hasFieldError(templateFieldErrorKey(field.id)) ? 'true' : null"
+                  role="group"
+                >
+                @switch (normalizedContentType(field)) {
+                  @case ('textarea') {
+                    <label class="pc-field pc-schema-wide">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <textarea rows="3" [name]="'template-' + field.id" [placeholder]="field.hint" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)"></textarea>
+                    </label>
+                  }
+                  @case ('number') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input type="number" [name]="'template-' + field.id" [placeholder]="field.hint" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)" />
+                    </label>
+                  }
+                  @case ('date') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input type="date" [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)" />
+                    </label>
+                  }
+                  @case ('datetime') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input type="datetime-local" [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)" />
+                    </label>
+                  }
+                  @case ('checkbox') {
+                    <label class="pc-template-checkbox">
+                      <input type="checkbox" [name]="'template-' + field.id" [checked]="getTemplateValue(field.id) === true" (change)="updateTemplateValue(field.id, $any($event.target).checked)" />
+                      <span class="pc-check"><app-icon name="check" [size]="13" /></span>
+                      <strong>{{ field.label }} @if (field.isRequired) { <b>*</b> }</strong>
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </label>
+                  }
+                  @case ('yesNo') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <select [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)">
+                        <option value="">Seçiniz</option><option value="Evet">Evet</option><option value="Hayır">Hayır</option>
+                      </select>
+                    </label>
+                  }
+                  @case ('employee') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <select [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)">
+                        <option value="">Çalışan seçiniz</option>
+                        @for (employee of allEmployees(); track employee.id) {
+                          @if (employee.isSelectable !== false) { <option [value]="employee.displayName">{{ employee.displayName }}</option> }
+                        }
+                      </select>
+                    </label>
+                  }
+                  @case ('department') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <select [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)">
+                        <option value="">Departman seçiniz</option>
+                        @for (department of departmentCandidates(); track department.id) { <option [value]="department.name">{{ department.name }}</option> }
+                      </select>
+                    </label>
+                  }
+                  @case ('select') {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <select [name]="'template-' + field.id" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)">
+                        <option value="">{{ field.hint || 'Seçiniz' }}</option>
+                        @if (field.listName === 'department') {
+                          @for (department of departmentCandidates(); track department.id) { <option [value]="department.name">{{ department.name }}</option> }
+                        } @else if (field.listName === 'employee') {
+                          @for (employee of allEmployees(); track employee.id) {
+                            @if (employee.isSelectable !== false) { <option [value]="employee.displayName">{{ employee.displayName }}</option> }
+                          }
+                        } @else {
+                          @for (option of field.options; track option) { <option [value]="option">{{ option }}</option> }
+                        }
+                      </select>
+                    </label>
+                  }
+                  @case ('checklist') {
+                    <fieldset class="pc-template-checklist">
+                      <legend>{{ field.label }} @if (field.isRequired) { <b>*</b> }</legend>
+                      @for (option of field.options; track option) {
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="isChecklistItemChecked(field.id, option)"
+                            (change)="toggleChecklistItem(field.id, option, $any($event.target).checked)"
+                          />
+                          <span class="pc-check"><app-icon name="check" [size]="13" /></span>
+                          <strong>{{ option }}</strong>
+                        </label>
+                      }
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </fieldset>
+                  }
+                  @case ('formGroup') {
+                    <fieldset class="pc-template-form-group pc-schema-wide">
+                      <legend>{{ field.label }} @if (field.isRequired) { <b>*</b> }</legend>
+                      <div>
+                        @for (subfield of field.options; track $index) {
+                          <label class="pc-field">
+                            <span>{{ subfield }}</span>
+                            <input
+                              [name]="'template-' + field.id + '-' + $index"
+                              [ngModel]="getFormGroupValue(field.id, subfield)"
+                              (ngModelChange)="updateFormGroupValue(field.id, subfield, $event)"
+                            />
+                          </label>
+                        }
+                      </div>
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </fieldset>
+                  }
+                  @case ('table') {
+                    <fieldset class="pc-template-table pc-schema-wide">
+                      <legend>{{ field.label }} @if (field.isRequired) { <b>*</b> }</legend>
+                      <div class="pc-template-table-row pc-template-table-head">
+                        @for (header of field.options; track $index) { <strong>{{ header }}</strong> }
+                      </div>
+                      @for (row of [0, 1]; track row) {
+                        <div class="pc-template-table-row">
+                          @for (header of field.options; track $index; let column = $index) {
+                            <input
+                              [attr.aria-label]="header + ' ' + (row + 1)"
+                              [name]="'template-' + field.id + '-' + row + '-' + column"
+                              [ngModel]="getTableCell(field.id, row, column)"
+                              (ngModelChange)="updateTableCell(field.id, row, column, $event)"
+                            />
+                          }
+                        </div>
+                      }
+                      @if (field.hint) { <small>{{ field.hint }}</small> }
+                    </fieldset>
+                  }
+                  @case ('attachment') {
+                    <label class="pc-template-file pc-schema-wide">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input
+                        type="file"
+                        [required]="field.isRequired && !getTemplateValue(field.id)"
+                        (change)="onTemplateFileSelected(field.id, $event)"
+                      />
+                      <span class="pc-template-file-button">
+                        <app-icon name="paperclip" [size]="16" />
+                        {{ getTemplateValue(field.id) || field.hint || 'Dosya seçin' }}
+                      </span>
+                    </label>
+                  }
+                  @case ('image') {
+                    <label class="pc-template-file pc-schema-wide">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        [required]="field.isRequired && !getTemplateValue(field.id)"
+                        (change)="onTemplateFileSelected(field.id, $event)"
+                      />
+                      <span class="pc-template-file-button">
+                        <app-icon name="image" [size]="16" />
+                        {{ getTemplateValue(field.id) || field.hint || 'Resim seçin' }}
+                      </span>
+                    </label>
+                  }
+                  @case ('signature') {
+                    <label class="pc-field pc-template-signature">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <span class="pc-template-signature-control">
+                        <app-icon name="signature" [size]="18" />
+                        <input
+                          type="text"
+                          [name]="'template-' + field.id"
+                          [placeholder]="field.hint || 'İmzalayanın adı ve soyadı'"
+                          [required]="field.isRequired"
+                          [ngModel]="getTemplateValue(field.id)"
+                          (ngModelChange)="updateTemplateValue(field.id, $event)"
+                        />
+                      </span>
+                    </label>
+                  }
+                  @default {
+                    <label class="pc-field">
+                      <span>{{ field.label }} @if (field.isRequired) { <b>*</b> }</span>
+                      <input type="text" [name]="'template-' + field.id" [placeholder]="field.hint" [required]="field.isRequired" [ngModel]="getTemplateValue(field.id)" (ngModelChange)="updateTemplateValue(field.id, $event)" />
+                    </label>
+                  }
+                }
+                @if (fieldError(templateFieldErrorKey(field.id)); as error) {
+                  <small class="pc-field-error">{{ error }}</small>
+                }
+                </div>
+              }
+            }
+          </section>
+
+          <section class="pc-departments">
+            <h3>{{ mode() === 'simple' ? 'Departmanlar' : 'İş Paketleri ve Departmanlar' }}</h3>
+            @if (mode() === 'simple') {
+              <div class="pc-simple-head"><span>Departman Seçiniz</span><span>Departman Yöneticisi</span><span></span></div>
+              @for (row of multiDepartments(); track row.id) {
+                <div class="pc-simple-row">
+                  <select
+                    [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'departmentId'))"
+                    [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'departmentId')"
+                    [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'departmentId')) ? 'true' : null"
+                    [attr.aria-label]="'Departman ' + row.id"
+                    [ngModel]="row.departmentId"
+                    name="{{ 'simpleDept' + row.id }}"
+                    (ngModelChange)="updateDepartmentRow(row.id, 'departmentId', $event)"
+                  >
+                    <option value="">Departman Seçiniz</option>
+                    @for (department of departmentCandidates(); track department.id) { <option [value]="department.id">{{ department.name }}</option> }
+                  </select>
+                  <select
+                    [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'managerEmployeeId'))"
+                    [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'managerEmployeeId')"
+                    [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'managerEmployeeId')) ? 'true' : null"
+                    [attr.aria-label]="'Departman yöneticisi ' + row.id"
+                    [ngModel]="row.managerEmployeeId"
+                    name="{{ 'simpleMgr' + row.id }}"
+                    (ngModelChange)="updateDepartmentRow(row.id, 'managerEmployeeId', $event)"
+                    [disabled]="!row.departmentId"
+                  >
+                    <option value="">Yönetici Seçiniz</option>
+                    @for (employee of departmentManagerCandidates(row.departmentId); track employee.id) { <option [value]="employee.id">{{ employee.displayName }}</option> }
+                  </select>
+                  @if (multiDepartments().length > 1) {
+                    <button type="button" class="pc-row-remove" [attr.aria-label]="'Satırı sil ' + row.id" title="Satırı sil" (click)="removeDepartmentRow(row.id)">
+                      <app-icon name="trash" [size]="15" />
+                    </button>
+                  }
+                </div>
+                @if (departmentRowErrors(row.id).length) {
+                  <div class="pc-row-errors" role="status">
+                    @for (error of departmentRowErrors(row.id); track error) { <span>{{ error }}</span> }
+                  </div>
+                }
+              }
+              <button class="pc-unit-add" type="button" (click)="addDepartment()">Birim Ekle <app-icon name="plus" [size]="19" /></button>
+            } @else {
+              <div class="pc-multi-head"><span></span><span>İş Başlığı</span><span>Departman Seçiniz</span><span>Departman Yöneticisi</span><span>Başlangıç Tarihi</span><span>Bitiş Tarihi</span><span></span></div>
+              <div class="pc-multi-list" cdkDropList (cdkDropListDropped)="reorderDepartmentRows($event)">
+                @for (row of multiDepartments(); track row.id) {
+                  <div class="pc-multi-row" cdkDrag [cdkDragData]="row">
+                    <button type="button" class="pc-row-drag-handle" cdkDragHandle [attr.aria-label]="'Satırı taşı ' + row.id" title="Sürükleyerek sırala">
+                      <app-icon name="grip" [size]="15" />
+                    </button>
+                    <input
+                      [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'title'))"
+                      [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'title')"
+                      [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'title')) ? 'true' : null"
+                      [attr.aria-label]="'İş başlığı ' + row.id"
+                      [value]="row.title"
+                      (input)="updateMultiDepartmentTitle(row.id, $any($event.target).value)"
+                    />
+                    <select
+                      [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'departmentId'))"
+                      [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'departmentId')"
+                      [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'departmentId')) ? 'true' : null"
+                      [attr.aria-label]="'Departman ' + row.id"
+                      [ngModel]="row.departmentId"
+                      name="{{ 'multiDept' + row.id }}"
+                      (ngModelChange)="updateDepartmentRow(row.id, 'departmentId', $event)"
+                    >
+                      <option value="">Departman Seçiniz</option>
+                      @for (department of departmentCandidates(); track department.id) { <option [value]="department.id">{{ department.name }}</option> }
+                    </select>
+                    <select
+                      [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'managerEmployeeId'))"
+                      [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'managerEmployeeId')"
+                      [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'managerEmployeeId')) ? 'true' : null"
+                      [attr.aria-label]="'Yönetici ' + row.id"
+                      [ngModel]="row.managerEmployeeId"
+                      name="{{ 'multiMgr' + row.id }}"
+                      (ngModelChange)="updateDepartmentRow(row.id, 'managerEmployeeId', $event)"
+                      [disabled]="!row.departmentId"
+                    >
+                      <option value="">Yönetici Seçiniz</option>
+                      @for (employee of departmentManagerCandidates(row.departmentId); track employee.id) { <option [value]="employee.id">{{ employee.displayName }}</option> }
+                    </select>
+                    <input
+                      type="date"
+                      [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'startDate'))"
+                      [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'startDate')"
+                      [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'startDate')) ? 'true' : null"
+                      [attr.aria-label]="'Başlangıç tarihi ' + row.id"
+                      [value]="row.startDate"
+                      (input)="updateDepartmentRow(row.id, 'startDate', $any($event.target).value)"
+                    />
+                    <input
+                      type="date"
+                      [class.has-error]="hasFieldError(departmentFieldErrorKey(row.id, 'endDate'))"
+                      [attr.data-validation-key]="departmentFieldErrorKey(row.id, 'endDate')"
+                      [attr.aria-invalid]="hasFieldError(departmentFieldErrorKey(row.id, 'endDate')) ? 'true' : null"
+                      [attr.aria-label]="'Bitiş tarihi ' + row.id"
+                      [value]="row.endDate"
+                      (input)="updateDepartmentRow(row.id, 'endDate', $any($event.target).value)"
+                    />
+                    @if (multiDepartments().length > 1) {
+                      <button type="button" class="pc-row-remove" [attr.aria-label]="'Satırı sil ' + row.id" title="Satırı sil" (click)="removeDepartmentRow(row.id)">
+                        <app-icon name="trash" [size]="15" />
+                      </button>
+                    }
+                  </div>
+                  @if (departmentRowErrors(row.id).length) {
+                    <div class="pc-row-errors" role="status">
+                      @for (error of departmentRowErrors(row.id); track error) { <span>{{ error }}</span> }
+                    </div>
+                  }
+                }
+              </div>
+              <button class="pc-unit-add" type="button" (click)="addDepartment()">Birim Ekle <app-icon name="plus" [size]="19" /></button>
+            }
+          </section>
+
+        </form>
+
+        <aside class="pc-template-card" [class.pc-template-card--multi]="mode() !== 'simple'" aria-label="Proje şablonu ayarları">
+          <section>
+            <h2>Proje Şablonu</h2>
+            <span class="pc-side-label">Şablon Seçiniz</span>
+            <div class="pc-template-picker">
+              <select aria-label="Şablon seçiniz" [ngModel]="selectedTemplateId()" (ngModelChange)="onTemplateSelected($event)">
+                <option [ngValue]="null">Varsayılan Şablon</option>
+                @for (tpl of availableTemplates(); track tpl.id) { <option [ngValue]="tpl.id">{{ tpl.name }}</option> }
+              </select>
+              <button type="button" (click)="openTemplateBuilder()">Yeni <app-icon name="plus" [size]="19" /></button>
+            </div>
+
+            <span class="pc-side-label">Seçilen Şablon Özellikleri</span>
+            <div class="pc-template-tags">
+              @for (tag of templateContractTags(); track tag.id) {
+                <span [class.is-custom]="tag.isCustom">
+                  {{ tag.label }}
+                  @if (tag.isRequired) { <b>*</b> }
+                  <i aria-hidden="true">×</i>
+                </span>
+              }
+            </div>
+          </section>
+
+          <section class="pc-components">
+            <h2>Proje Bileşenleri</h2>
+            @for (component of components(); track component.key) {
+              <label [class.is-disabled]="component.required">
+                <input type="checkbox" [checked]="component.selected" [disabled]="component.required" (change)="toggleComponent(component.key)" />
+                <span class="pc-check"><app-icon name="check" [size]="13" /></span>
+                <strong>{{ component.label }}</strong>
+                <small>{{ component.required ? 'Zorunlu' : 'İsteğe Bağlı' }}</small>
+              </label>
+            }
+          </section>
+
+          <footer>
+            @if (validationErrorEntries().length) {
+              <div class="pc-validation-summary" role="alert">
+                <app-icon name="alert" [size]="17" />
+                <div>
+                  <strong>{{ validationErrorEntries().length }} alanı kontrol edin</strong>
+                  @for (message of validationSummaryMessages().slice(0, 2); track message) {
+                    <span>{{ message }}</span>
+                  }
+                  @if (validationSummaryMessages().length > 2) {
+                    <small>ve {{ validationSummaryMessages().length - 2 }} uyarı daha</small>
+                  }
+                </div>
+              </div>
+            } @else if (errorMessage()) {
+              <div class="pc-validation-summary pc-validation-summary--general" role="alert">
+                <app-icon name="alert" [size]="17" />
+                <div>
+                  <strong>Proje kaydedilemedi</strong>
+                  <span>{{ errorMessage() }}</span>
+                </div>
+              </div>
+            }
+            <div class="pc-actions">
+              <button class="pc-cancel" type="button" (click)="cancel()" [disabled]="saving()">Vazgeç</button>
+              <button class="pc-save" type="button" (click)="save()" [disabled]="saving()">{{ saving() ? 'Kaydediliyor…' : 'Kaydet' }}</button>
+            </div>
+          </footer>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>

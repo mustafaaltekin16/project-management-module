@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ozdilek.PM.UserDirectoryService.Domain\Ozdilek.PM.UserDirectoryService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\Ozdilek.PM.Contracts\Ozdilek.PM.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Ozdilek.PM.SharedKernel\Ozdilek.PM.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

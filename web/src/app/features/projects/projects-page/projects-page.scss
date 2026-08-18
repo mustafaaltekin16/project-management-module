@@ -1,0 +1,197 @@
+/* Bu ekranın ana görsel sistemi global styles.scss içindedir. Gantt'a özel bu kurallar,
+ * değişken ay sayısında başlık ve satırların aynı kolon ölçüsünü kullanmasını sağlar. */
+
+.pm-gantt-card {
+  border: 1px solid #e7e9f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.35rem 1.15rem rgb(37 45 72 / 5%);
+}
+
+.pm-gantt-scroll {
+  overscroll-behavior: contain;
+  background: #fff;
+}
+
+.pm-gantt-grid {
+  --gantt-name-width: 15rem;
+  --gantt-month-width: 11rem;
+  --gantt-month-count: 1;
+  width: 100%;
+  min-width: var(--gantt-grid-min-width, 82rem);
+}
+
+.pm-gantt-header {
+  grid-template-columns: var(--gantt-name-width) repeat(var(--gantt-month-count), minmax(var(--gantt-month-width), 1fr));
+  min-width: 100%;
+}
+
+.pm-gantt-row {
+  grid-template-columns: var(--gantt-name-width) minmax(0, 1fr);
+  width: 100%;
+}
+
+.pm-gantt-timeline {
+  grid-template-columns: repeat(var(--gantt-month-count), minmax(var(--gantt-month-width), 1fr));
+}
+
+.pm-gantt-project-heading,
+.pm-gantt-name {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  border-right: 1px solid #e4e7ef;
+  box-shadow: 0.35rem 0 0.6rem -0.6rem rgb(37 45 72 / 45%);
+}
+
+.pm-gantt-project-heading {
+  z-index: 6;
+  background: #f8f9fb;
+}
+
+.pm-gantt-name button {
+  color: #5474ad;
+  border-color: #b8c4d9;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.pm-gantt-name button:hover {
+  color: #315fba;
+  background: #f0f5ff;
+  border-color: #6f91cf;
+}
+
+.pm-gantt-name button.is-loading {
+  color: #8b96aa;
+  background: #f6f8fb;
+}
+
+.pm-gantt-project.is-expanded {
+  background: #f8faff;
+  box-shadow: inset 0.2rem 0 #4d7bd8;
+}
+
+.pm-gantt-project.is-expanded > .pm-gantt-row .pm-gantt-name,
+.pm-gantt-name--task {
+  background: #f8faff;
+}
+
+.pm-gantt-subtasks {
+  padding: 0.2rem 0 0.35rem;
+  background: #f8faff;
+  border-top: 1px solid #edf0f6;
+}
+
+.pm-gantt-row--task {
+  min-height: 2.55rem;
+}
+
+.pm-gantt-name--task {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem 0.4rem calc(1.75rem + var(--task-indent, 0rem));
+  color: #4d5365;
+  font-size: 0.78rem;
+  font-weight: 550;
+}
+
+.pm-gantt-name--task span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-gantt-task-status {
+  width: 0.48rem;
+  height: 0.48rem;
+  flex: 0 0 0.48rem;
+  background: #aeb6c5;
+  border-radius: 50%;
+}
+
+.pm-gantt-task-status.is-progress {
+  background: #4d7bd8;
+  box-shadow: 0 0 0 0.18rem #e9f0ff;
+}
+
+.pm-gantt-task-status.is-done {
+  background: #35a76f;
+}
+
+.pm-gantt-bar--task {
+  top: 0.45rem;
+  height: 1.62rem;
+  min-width: 2rem;
+  opacity: 0.78;
+}
+
+.pm-gantt-bar--task.is-done {
+  opacity: 0.55;
+}
+
+.pm-gantt-unscheduled {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  color: #8b93a6;
+  background: #f1f3f7;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.pm-gantt-task-state {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: var(--gantt-name-width);
+  min-height: 2.6rem;
+  padding: 0.55rem 0.75rem 0.55rem 1.75rem;
+  color: #7b8395;
+  background: #f8faff;
+  border-right: 1px solid #e4e7ef;
+  font-size: 0.76rem;
+}
+
+.pm-gantt-task-state--error {
+  color: #a65555;
+}
+
+.pm-gantt-task-state button {
+  padding: 0.2rem 0.45rem;
+  color: #315fba;
+  background: #fff;
+  border: 1px solid #ccd8ed;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pm-gantt-task-spinner {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid #d7deeb;
+  border-top-color: #4d7bd8;
+  border-radius: 50%;
+  animation: pm-gantt-spin 650ms linear infinite;
+}
+
+@keyframes pm-gantt-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-gantt-task-spinner { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .pm-gantt-grid {
+    --gantt-name-width: 12rem;
+    --gantt-month-width: 9.5rem;
+  }
+}

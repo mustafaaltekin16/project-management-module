@@ -1,0 +1,238 @@
+<section class="aiwp" aria-label="AI iş paketi oluştur">
+
+  <section class="aiwp-card">
+    <header class="aiwp-card-head">
+      <span class="aiwp-step-badge"><app-icon name="sparkles" [size]="17" /></span>
+      <div>
+        <h2>Bağlam ve Kapsam</h2>
+        <p>AI'ya yalnızca aşağıda işaretlenen içerik gönderilir.</p>
+      </div>
+    </header>
+
+    <div class="aiwp-context-summary">
+      <div><span>Proje</span><strong>{{ project.name }}</strong></div>
+      <div><span>Proje türü</span><strong>{{ project.type }}</strong></div>
+      <div><span>Birim</span><strong>{{ project.unit }}</strong></div>
+    </div>
+
+    <div class="aiwp-field">
+      <div class="aiwp-field-head">
+        <label for="aiwp-instructions">Ek talimat <small>— opsiyonel</small></label>
+        <span>{{ aiInstructions().length }} / 500</span>
+      </div>
+      <textarea
+        id="aiwp-instructions"
+        rows="3"
+        maxlength="500"
+        placeholder="AI'nın özellikle dikkate almasını istediğiniz kapsamı, öncelikleri veya kısıtları yazın."
+        [ngModel]="aiInstructions()"
+        (ngModelChange)="updateInstructions($event)"
+        name="aiInstructions"
+      ></textarea>
+    </div>
+
+    <div class="aiwp-docs">
+      <div class="aiwp-docs-head">
+        <span>Proje dokümanları <small>— yalnızca PDF ve Word içeriği okunabilir</small></span>
+        @if (documents.length > 6) {
+          <button type="button" (click)="toggleDocumentListExpanded()">
+            {{ documentListExpanded() ? 'Daralt' : 'Tümünü aç' }}
+          </button>
+        }
+      </div>
+
+      <div class="aiwp-doc-list">
+        @for (document of (documentListExpanded() ? documents : documents.slice(0, 6)); track document.id) {
+          <label
+            class="aiwp-doc-option"
+            [class.is-selected]="selectedDocumentIds().has(document.id)"
+            [class.is-ineligible]="!isDocumentEligible(document.kind)"
+          >
+            <input
+              type="checkbox"
+              [checked]="selectedDocumentIds().has(document.id)"
+              [disabled]="!isDocumentEligible(document.kind)"
+              (change)="toggleDocumentSelection(document.id)"
+            />
+            <app-file-type-icon [kind]="document.kind" [size]="28" [label]="document.name" />
+            <span class="aiwp-doc-copy">
+              <strong>{{ document.name }}</strong>
+              <small>{{ document.size }} · {{ document.uploadedBy || 'Bilinmiyor' }}</small>
+            </span>
+            @if (isDocumentEligible(document.kind)) {
+              <span class="aiwp-doc-status is-ok">metin okunabilir</span>
+            } @else {
+              <span class="aiwp-doc-status">desteklenmiyor</span>
+            }
+          </label>
+        } @empty {
+          <div class="aiwp-doc-empty">
+            <app-icon name="file-text" [size]="22" />
+            <span>Henüz proje dokümanı yok — AI, proje bilgileri ve açıklamanızı kullanarak devam edebilir.</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="aiwp-generate-footer">
+      <button type="button" class="aiwp-primary" [disabled]="aiGenerating()" (click)="generateAiSuggestions()">
+        <app-icon [name]="aiGenerating() ? 'clock' : 'sparkles'" [size]="18" />
+        {{ aiGenerating() ? 'Kapsam analiz ediliyor…' : 'İş Paketi Çıkart' }}
+      </button>
+      @if (aiGenerating()) {
+        <span class="aiwp-generating-note">{{ generationElapsedSeconds() }} sn geçti — sayfayı kapatabilirsiniz.</span>
+      }
+    </div>
+  </section>
+
+  <section class="aiwp-card">
+    <header class="aiwp-card-head">
+      <span class="aiwp-step-badge"><app-icon name="list" [size]="17" /></span>
+      <div>
+        <div class="aiwp-card-title-row">
+          <h2>Bekleyen Öneriler</h2>
+          @if (aiSuggestions().length) {
+            <span class="aiwp-pill aiwp-pill--warning">{{ aiSuggestions().length }} bekliyor</span>
+          }
+        </div>
+        <p>Her öneri ayrı ayrı karara bağlanır. Onaylamadan hiçbiri projeye eklenmez.</p>
+      </div>
+    </header>
+
+    @if (aiSuggestions().length) {
+      @if (departmentCounts().length > 1) {
+        <div class="aiwp-filters">
+          <button type="button" [class.is-active]="activeFilter() === 'all'" (click)="setFilter('all')">
+            Tümü <span>{{ aiSuggestions().length }}</span>
+          </button>
+          @for (entry of departmentCounts(); track entry.department) {
+            <button type="button" [class.is-active]="activeFilter() === entry.department" (click)="setFilter(entry.department)">
+              {{ entry.department }} <span>{{ entry.count }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      @if (selectedSuggestionIds().size) {
+        <div class="aiwp-bulk-bar">
+          <span>{{ selectedSuggestionIds().size }} öneri seçili</span>
+          <div class="aiwp-bulk-actions">
+            <button type="button" class="aiwp-danger-ghost" (click)="bulkRejectSelected()">Seçilenleri reddet</button>
+            <button type="button" class="aiwp-primary aiwp-primary--sm" (click)="bulkApproveSelected()">
+              <app-icon name="check" [size]="12" /> Göreve Ekle
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="aiwp-suggestion-list">
+        @for (group of groupedBySource(); track group.source) {
+          <div class="aiwp-source-group">
+            @if (groupedBySource().length > 1) {
+              <div class="aiwp-source-head">
+                <app-icon name="file-text" [size]="15" />
+                <span>{{ group.source }}</span>
+                <small>{{ group.items.length }} öneri</small>
+              </div>
+            }
+            @if (!group.usedRealDocumentContext) {
+              <div class="aiwp-context-warning">
+                <app-icon name="alert" [size]="14" />
+                <span>Bu öneriler seçilen dokümanların içeriği okunamadığı için yalnızca proje bilgilerine dayanmaktadır.</span>
+              </div>
+            }
+            @for (suggestion of group.items; track suggestion.itemId) {
+              <label class="aiwp-suggestion" [class.is-selected]="isSuggestionSelected(suggestion.itemId)">
+                <input
+                  type="checkbox"
+                  [checked]="isSuggestionSelected(suggestion.itemId)"
+                  (change)="toggleSuggestionSelected(suggestion.itemId)"
+                />
+                <span class="aiwp-suggestion-copy">
+                  <strong>{{ suggestion.title }}</strong>
+                  <span class="aiwp-suggestion-meta">
+                    <span class="aiwp-pill">{{ suggestion.department }}</span>
+                    <small>{{ suggestion.effortHours }} sa</small>
+                    @if (suggestion.activities.length) { <small>{{ suggestion.activities.length }} alt görev</small> }
+                  </span>
+                  @if (suggestion.description) {
+                    <p class="aiwp-suggestion-description">{{ suggestion.description }}</p>
+                  }
+                  @if (suggestion.sequenceNote) {
+                    <p class="aiwp-suggestion-sequence">
+                      <app-icon name="clock" [size]="12" />
+                      {{ suggestion.sequenceNote }}
+                    </p>
+                  }
+                  @if (suggestion.activities.length) {
+                    <ol class="aiwp-suggestion-activities">
+                      @for (activity of suggestion.activities; track activity.id) {
+                        <li>
+                          {{ activity.title }}
+                          @if (activity.effortHours) { <small>{{ activity.effortHours }} sa</small> }
+                        </li>
+                      }
+                    </ol>
+                  }
+                </span>
+                <span class="aiwp-suggestion-actions">
+                  <button
+                    type="button"
+                    class="aiwp-danger-ghost"
+                    [disabled]="isAiSuggestionBusy(suggestion.itemId)"
+                    (click)="dismissAiSuggestion(suggestion)"
+                  >
+                    Reddet
+                  </button>
+                  <button
+                    type="button"
+                    class="aiwp-approve"
+                    [disabled]="isAiSuggestionBusy(suggestion.itemId)"
+                    (click)="approveAiSuggestion(suggestion)"
+                  >
+                    {{ isAiSuggestionBusy(suggestion.itemId) ? '...' : 'Göreve Ekle' }}
+                  </button>
+                </span>
+              </label>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="aiwp-empty-state">
+        <app-icon name="sparkles" [size]="26" />
+        <strong>Öneriler burada görünecek</strong>
+        <p>Yukarıdaki kapsamı hazırlayıp "İş Paketi Çıkart" dediğinizde her öneriyi ayrı ayrı inceleyebilirsiniz.</p>
+      </div>
+    }
+  </section>
+
+  @if (sentThisSession().length) {
+    <section class="aiwp-card">
+      <header class="aiwp-card-head">
+        <span class="aiwp-step-badge aiwp-step-badge--success"><app-icon name="check" [size]="17" /></span>
+        <div>
+          <div class="aiwp-card-title-row">
+            <h2>{{ sentThisSession().length }} öneri Görevler'e gönderildi</h2>
+          </div>
+          <p>Görevler <strong>Atanmamış</strong> olarak açıldı — atamayı siz yapacaksınız.</p>
+        </div>
+        <button type="button" class="aiwp-link" (click)="goToTasks()">
+          Görevler sekmesi <app-icon name="arrow-right" [size]="12" />
+        </button>
+      </header>
+      <div class="aiwp-sent-list">
+        @for (sent of sentThisSession(); track sent.itemId) {
+          <div class="aiwp-sent-row">
+            <span class="aiwp-sent-avatar"><app-icon name="user" [size]="14" /></span>
+            <span class="aiwp-sent-title">{{ sent.title }}</span>
+            <span class="aiwp-pill aiwp-pill--ai">AI</span>
+            <span class="aiwp-pill aiwp-pill--warning">Atanmamış</span>
+            <small>{{ sent.effortHours }} sa</small>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+</section>

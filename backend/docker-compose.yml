@@ -1,0 +1,198 @@
+name: ozveri-0047-pm
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cwa
+      POSTGRES_PASSWORD: cwa-dev-password
+      POSTGRES_DB: cwa_pm_project
+      POSTGRES_MULTIPLE_DATABASES: cwa_pm_project,cwa_pm_task,cwa_pm_feasibility,cwa_pm_ai,cwa_pm_userdirectory
+    volumes:
+      - pm-postgres-data:/var/lib/postgresql/data
+      - ./db/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    ports:
+      - "127.0.0.1:6432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cwa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: cwa
+      RABBITMQ_DEFAULT_PASS: cwa-dev-password
+    ports:
+      - "127.0.0.1:6672:5672"
+      - "127.0.0.1:16672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  elasticsearch:
+    # OpenSearch, not literal Elasticsearch — see CwaLoggingExtensions.cs for why (docker.elastic.co's
+    # CDN drops mid-pull in this environment; OpenSearch is Docker-Hub-hosted and speaks the same
+    # Elasticsearch bulk/REST protocol that Serilog.Sinks.OpenSearch targets).
+    image: opensearchproject/opensearch:2.17.0
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:6920:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  kibana:
+    image: opensearchproject/opensearch-dashboards:2.17.0
+    environment:
+      OPENSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports:
+      - "127.0.0.1:6601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  projectservice-api:
+    build:
+      context: .
+      dockerfile: src/Services/ProjectService/Ozdilek.PM.ProjectService.Api/Dockerfile
+    environment:
+      ConnectionStrings__ProjectDatabase: "Host=postgres;Port=5432;Database=cwa_pm_project;Username=cwa;Password=cwa-dev-password"
+      Services__FeasibilityService: "http://feasibilityservice-api:8080"
+      Services__TaskService: "http://taskservice-api:8080"
+      Services__UserDirectoryService: "http://userdirectoryservice-api:8080"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__Username: cwa
+      RabbitMq__Password: cwa-dev-password
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+    ports:
+      - "127.0.0.1:6001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      feasibilityservice-api:
+        condition: service_started
+      taskservice-api:
+        condition: service_started
+      userdirectoryservice-api:
+        condition: service_started
+
+  taskservice-api:
+    build:
+      context: .
+      dockerfile: src/Services/TaskService/Ozdilek.PM.TaskService.Api/Dockerfile
+    environment:
+      ConnectionStrings__TaskDatabase: "Host=postgres;Port=5432;Database=cwa_pm_task;Username=cwa;Password=cwa-dev-password"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__Username: cwa
+      RabbitMq__Password: cwa-dev-password
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+    ports:
+      - "127.0.0.1:6002:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  feasibilityservice-api:
+    build:
+      context: .
+      dockerfile: src/Services/FeasibilityService/Ozdilek.PM.FeasibilityService.Api/Dockerfile
+    environment:
+      ConnectionStrings__FeasibilityDatabase: "Host=postgres;Port=5432;Database=cwa_pm_feasibility;Username=cwa;Password=cwa-dev-password"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__Username: cwa
+      RabbitMq__Password: cwa-dev-password
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+    ports:
+      - "127.0.0.1:6003:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  aigatewayservice-api:
+    build:
+      context: .
+      dockerfile: src/Services/AIGatewayService/Ozdilek.PM.AIGatewayService.Api/Dockerfile
+    environment:
+      ConnectionStrings__AiGatewayDatabase: "Host=postgres;Port=5432;Database=cwa_pm_ai;Username=cwa;Password=cwa-dev-password"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__Username: cwa
+      RabbitMq__Password: cwa-dev-password
+      Services__ProjectService: "http://projectservice-api:8080"
+      Services__TaskService: "http://taskservice-api:8080"
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+      # İş paketi üretimi artık paid bir LLM API'sine değil, RAG servisinin kendisine gidiyor (bkz.
+      # RagLlmProvider) — burada seçilecek başka bir gerçek sağlayıcı yok, "Mock" dışında.
+      Ai__Provider: "RAG"
+      # RAG_BASE_URL .env'de gerçek RunPod adresiyle güncellenir (pod her yeniden başladığında değişebilir).
+      Rag__BaseUrl: "${RAG_BASE_URL:-http://localhost:8100}"
+      Rag__ApiKey: "${RAG_API_KEY}"
+    ports:
+      - "127.0.0.1:6004:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      projectservice-api:
+        condition: service_started
+      taskservice-api:
+        condition: service_started
+
+  userdirectoryservice-api:
+    build:
+      context: .
+      dockerfile: src/Services/UserDirectoryService/Ozdilek.PM.UserDirectoryService.Api/Dockerfile
+    environment:
+      ConnectionStrings__UserDirectoryDatabase: "Host=postgres;Port=5432;Database=cwa_pm_userdirectory;Username=cwa;Password=cwa-dev-password"
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+    ports:
+      - "127.0.0.1:6005:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  apigateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/Ozdilek.PM.ApiGateway/Dockerfile
+    environment:
+      ReverseProxy__Clusters__project-service__Destinations__d1__Address: "http://projectservice-api:8080/"
+      ReverseProxy__Clusters__task-service__Destinations__d1__Address: "http://taskservice-api:8080/"
+      ReverseProxy__Clusters__feasibility-service__Destinations__d1__Address: "http://feasibilityservice-api:8080/"
+      ReverseProxy__Clusters__ai-gateway-service__Destinations__d1__Address: "http://aigatewayservice-api:8080/"
+      ReverseProxy__Clusters__user-directory-service__Destinations__d1__Address: "http://userdirectoryservice-api:8080/"
+      Services__UserDirectoryService: "http://userdirectoryservice-api:8080"
+      Serilog__ElasticsearchUrl: "http://elasticsearch:9200"
+    ports:
+      # Sunucuda başka projeler 4200/5010 kullandığı için varsayılan değişti — backend/.env'de
+      # GATEWAY_PORT ile istenen porta geçirilebilir.
+      - "${GATEWAY_PORT:-7500}:8080"
+    depends_on:
+      - projectservice-api
+      - taskservice-api
+      - feasibilityservice-api
+      - aigatewayservice-api
+      - userdirectoryservice-api
+
+volumes:
+  pm-postgres-data:

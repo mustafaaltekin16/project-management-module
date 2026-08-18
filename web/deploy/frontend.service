@@ -1,0 +1,20 @@
+[Unit]
+Description=Ozdilek PM Frontend (Docker Compose)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Repo'nun sunucudaki gerçek yolunu buraya yazın (frontend web/ altında).
+WorkingDirectory=/opt/ozveri-0047/web
+ExecStart=/usr/bin/docker compose -f compose.yml up -d --build
+ExecStop=/usr/bin/docker compose -f compose.yml down
+ExecReload=/usr/bin/docker compose -f compose.yml up -d --build
+Restart=on-failure
+RestartSec=5
+User=deploy
+
+[Install]
+WantedBy=multi-user.target

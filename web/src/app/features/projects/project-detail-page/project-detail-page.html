@@ -1,0 +1,1338 @@
+<main class="pm-canvas pd-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell" aria-label="Proje detay ekranı">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [attr.aria-current]="item.active ? 'page' : null"
+            [title]="item.label"
+            (click)="item.label === 'Organizasyon' ? goToDepartments() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Şablonlar' ? goToTemplates() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace">
+      <header class="pm-topbar pd-topbar">
+        <div class="pd-breadcrumb">
+          <button type="button" aria-label="Proje listesine dön" title="Proje listesine dön" (click)="goBack()">
+            <app-icon name="arrow-left" [size]="16" />
+          </button>
+          <span>Projeler Modülü / <strong>{{ project().name }}</strong></span>
+        </div>
+
+        <div class="pm-top-actions">
+          <button class="pm-top-icon" type="button" aria-label="Ara"><app-icon name="search" [size]="20" /></button>
+          <button class="pm-top-icon" type="button" aria-label="Yardım"><app-icon name="help" [size]="19" /></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Mesajlar">
+            <app-icon name="mail" [size]="19" /><span>1</span>
+          </button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler">
+            <app-icon name="bell" [size]="19" /><span>3</span>
+          </button>
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="profileOpen.update((value) => !value)">
+              <strong>{{ currentUserName() }}</strong><span class="pm-avatar" aria-hidden="true">SG</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu"><strong>{{ currentUserName() }}</strong><span>Proje Yöneticisi</span><button type="button" (click)="logout()">Oturumu Kapat</button></div>
+            }
+          </div>
+        </div>
+      </header>
+
+      @if (loadError()) {
+        <p class="pd-load-error" role="alert">Proje yüklenemedi: {{ loadError() }}</p>
+      }
+
+      <section class="pd-module">
+        <div
+          class="pd-layout"
+          [class.pd-layout--summary-collapsed]="summaryCollapsed()"
+          [class.pd-layout--timeline-collapsed]="timelineCollapsed()"
+        >
+          <aside id="pd-project-summary" class="pd-summary" aria-label="Proje özeti">
+            <button
+              class="pd-panel-toggle pd-panel-toggle--left"
+              type="button"
+              aria-controls="pd-project-summary"
+              [attr.aria-expanded]="!summaryCollapsed()"
+              [attr.aria-label]="summaryCollapsed() ? 'Proje özetini genişlet' : 'Proje özetini daralt'"
+              [attr.title]="summaryCollapsed() ? 'Proje özetini göster' : 'Proje özetini gizle'"
+              (click)="toggleSummaryPanel()"
+            >
+              <span class="pd-panel-toggle-icon"><app-icon name="chevron-right" [size]="16" /></span>
+              <span class="pd-panel-toggle-label">{{ summaryCollapsed() ? 'Özeti göster' : 'Özeti gizle' }}</span>
+            </button>
+
+              <div class="pd-summary-content" [attr.aria-hidden]="summaryCollapsed()">
+                <div class="pd-field pd-field--title">
+                  <span>Proje Adı</span>
+                  <strong>{{ project().name }}</strong>
+                </div>
+
+                <div class="pd-summary-pair">
+                  <div class="pd-field">
+                    <span>Yöneten</span>
+                    <strong><app-icon name="user" [size]="13" /> {{ project().manager }}</strong>
+                  </div>
+                  <div class="pd-field">
+                    <span>Birim</span>
+                    <strong>{{ project().unit }}</strong>
+                  </div>
+                </div>
+
+                @if (project().secondManager) {
+                  <div class="pd-summary-pair">
+                    <div class="pd-field">
+                      <span>2. Yönetici</span>
+                      <strong><app-icon name="user" [size]="13" /> {{ project().secondManager }}</strong>
+                    </div>
+                  </div>
+                }
+
+                <div class="pd-summary-pair">
+                  <div class="pd-field"><span>Proje Türü</span><strong>{{ project().type }}</strong></div>
+                  <div class="pd-field"><span>Bütçe</span><strong>{{ project().budget }}</strong></div>
+                </div>
+
+                <div class="pd-summary-pair pd-summary-pair--dates">
+                  <div class="pd-field"><span>Başl.Tarihi</span><strong>{{ project().start }}</strong></div>
+                  <div class="pd-field"><span>Bitiş Tarihi</span><strong>{{ project().end }}</strong></div>
+                </div>
+
+                <div class="pd-deviation">
+                  <div><span>Sapma Oranı</span><strong [class]="'pd-deviation-badge pd-deviation-badge--' + deviationTone()">{{ project().deviation }}</strong></div>
+                  @if (project().departments.length) {
+                    <div class="pd-departments">
+                      <span>Birimler</span>
+                      <ul>
+                        @for (department of project().departments; track department.id) { <li>{{ department.departmentName }}</li> }
+                      </ul>
+                    </div>
+                  }
+                </div>
+
+                <div class="pd-progress-card">
+                  <div>
+                    <span>Durumu</span>
+                    <strong>%{{ project().progress }}</strong>
+                    <p>{{ project().statusLabel }}</p>
+                  </div>
+                  <span
+                    class="pd-progress-ring"
+                    [style.--project-progress]="project().progress * 3.6 + 'deg'"
+                    aria-hidden="true"
+                  ></span>
+                </div>
+
+              </div>
+          </aside>
+
+          <section class="pd-content">
+            <nav class="pd-tabs" role="tablist" aria-label="Proje detay bölümleri">
+              @for (tab of tabs(); track tab.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  [class.is-active]="activeTab() === tab.id"
+                  [attr.aria-selected]="activeTab() === tab.id"
+                  (click)="selectTab(tab.id)"
+                >
+                  <app-icon [name]="tab.icon" [size]="14" />
+                  <span>{{ tab.label }}</span>
+                </button>
+              }
+            </nav>
+
+            @switch (activeTab()) {
+              @case ('overview') {
+                <section class="pd-overview" aria-label="Proje açıklamaları">
+                  <div class="pd-feed">
+                    @if (project().templateName) {
+                      <article class="pd-template-summary">
+                        <header>
+                          <div>
+                            <app-icon name="form" [size]="16" />
+                            <span><small>Proje şablonu</small><strong>{{ project().templateName }}</strong></span>
+                          </div>
+                          @if (canManageProjects() && editableTemplateFields().length && !editingTemplateValues()) {
+                            <button type="button" class="pd-template-edit-btn" (click)="startEditTemplateValues()">
+                              <app-icon name="edit" [size]="13" /> Düzenle
+                            </button>
+                          }
+                        </header>
+
+                        @if (!editingTemplateValues()) {
+                          <div class="pd-template-summary-grid">
+                            @for (field of project().templateValues; track field.templateFieldId) {
+                              @if (field.contentType === 'section') {
+                                <h3>{{ field.label }}</h3>
+                                @if (field.hint) { <p>{{ field.hint }}</p> }
+                              } @else {
+                                <div>
+                                  <span>{{ field.label }}</span>
+                                  <strong>{{ formatTemplateValue(field) }}</strong>
+                                </div>
+                              }
+                            } @empty {
+                              <p>Bu şablonda kaydedilmiş özel alan bulunmuyor.</p>
+                            }
+                          </div>
+                        } @else {
+                          <form class="pd-template-edit-form" (submit)="$event.preventDefault(); saveTemplateValues()">
+                            <div class="pd-template-summary-grid">
+                              @for (field of project().templateValues; track field.templateFieldId) {
+                                @if (!isTemplateFieldEditable(field)) {
+                                  @if (field.contentType === 'section') {
+                                    <h3>{{ field.label }}</h3>
+                                    @if (field.hint) { <p>{{ field.hint }}</p> }
+                                  } @else {
+                                    <div>
+                                      <span>{{ field.label }}</span>
+                                      <strong>{{ formatTemplateValue(field) }}</strong>
+                                    </div>
+                                  }
+                                } @else {
+                                  <label
+                                    class="pd-dialog-field"
+                                    [class.pd-dialog-field--wide]="['textarea', 'checklist', 'table', 'formGroup'].includes(field.contentType)"
+                                  >
+                                    <span>{{ field.label }}@if (field.isRequired) { <b> *</b> }</span>
+                                    @switch (field.contentType) {
+                                      @case ('textarea') {
+                                        <textarea
+                                          rows="2"
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                        ></textarea>
+                                      }
+                                      @case ('date') {
+                                        <input
+                                          type="date"
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                        />
+                                      }
+                                      @case ('datetime') {
+                                        <input
+                                          type="datetime-local"
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                        />
+                                      }
+                                      @case ('checkbox') {
+                                        <input
+                                          type="checkbox"
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId) === 'true'"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event ? 'true' : '')"
+                                        />
+                                      }
+                                      @case ('yesNo') {
+                                        <select
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                        >
+                                          <option value="">Seçiniz</option>
+                                          <option value="true">Evet</option>
+                                          <option value="false">Hayır</option>
+                                        </select>
+                                      }
+                                      @case ('select') {
+                                        @if (field.options.length) {
+                                          <select
+                                            [name]="'tv-' + field.templateFieldId"
+                                            [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                            (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                          >
+                                            <option value="">Seçiniz</option>
+                                            @for (option of field.options; track option) {
+                                              <option [value]="option">{{ option }}</option>
+                                            }
+                                          </select>
+                                        } @else {
+                                          <input
+                                            type="text"
+                                            [name]="'tv-' + field.templateFieldId"
+                                            [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                            (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                          />
+                                        }
+                                      }
+                                      @case ('checklist') {
+                                        <div class="pd-template-checklist">
+                                          @for (option of field.options; track option) {
+                                            <label>
+                                              <input
+                                                type="checkbox"
+                                                [checked]="isChecklistDraftChecked(field.templateFieldId, option)"
+                                                (change)="toggleChecklistDraftItem(field.templateFieldId, option, $any($event.target).checked)"
+                                              />
+                                              {{ option }}
+                                            </label>
+                                          }
+                                        </div>
+                                      }
+                                      @case ('table') {
+                                        <div class="pd-template-checklist">
+                                          @for (option of field.options; track option) {
+                                            <label class="pd-template-subfield">
+                                              <span>{{ option }}</span>
+                                              <input
+                                                type="text"
+                                                [name]="'tv-' + field.templateFieldId + '-' + option"
+                                                [ngModel]="getTableDraftCell(field.templateFieldId, option)"
+                                                (ngModelChange)="updateTableDraftCell(field.templateFieldId, option, $event)"
+                                              />
+                                            </label>
+                                          }
+                                        </div>
+                                      }
+                                      @case ('formGroup') {
+                                        <div class="pd-template-checklist">
+                                          @for (option of field.options; track option) {
+                                            <label class="pd-template-subfield">
+                                              <span>{{ option }}</span>
+                                              <input
+                                                type="text"
+                                                [name]="'tv-' + field.templateFieldId + '-' + option"
+                                                [ngModel]="getTableDraftCell(field.templateFieldId, option)"
+                                                (ngModelChange)="updateTableDraftCell(field.templateFieldId, option, $event)"
+                                              />
+                                            </label>
+                                          }
+                                        </div>
+                                      }
+                                      @default {
+                                        <input
+                                          type="text"
+                                          [name]="'tv-' + field.templateFieldId"
+                                          [ngModel]="getTemplateValueDraft(field.templateFieldId)"
+                                          (ngModelChange)="updateTemplateValueDraft(field.templateFieldId, $event)"
+                                        />
+                                      }
+                                    }
+                                  </label>
+                                }
+                              }
+                            </div>
+                            @if (templateValuesError()) { <p class="pd-dialog-error">{{ templateValuesError() }}</p> }
+                            <footer class="pd-template-edit-actions">
+                              <button type="button" class="pd-dialog-cancel" (click)="cancelEditTemplateValues()">Vazgeç</button>
+                              <button type="submit" class="pd-dialog-primary" [disabled]="savingTemplateValues()">
+                                {{ savingTemplateValues() ? 'Kaydediliyor…' : 'Kaydet' }}
+                              </button>
+                            </footer>
+                          </form>
+                        }
+                      </article>
+                    }
+                    @for (message of overviewMessages(); track message.id) {
+                      <article class="pd-message" [id]="message.isNote ? 'note-' + message.id : null">
+                        <header>
+                          <div><app-icon name="user" [size]="14" /><strong>{{ message.author }}</strong>@if (message.unit) { <span>/ {{ message.unit }}</span> }</div>
+                          <div class="pd-message-actions">
+                            <time>{{ message.date }}</time>
+                            @if (message.isNote && message.canEdit) {
+                              <button type="button" aria-label="Açıklamayı düzenle" (click)="startEditNote(message)"><app-icon name="edit" [size]="13" /></button>
+                            }
+                            @if (message.isNote) {
+                              <button type="button" aria-label="Açıklamayı paylaş" (click)="shareNote(message)"><app-icon name="send" [size]="13" /></button>
+                            }
+                          </div>
+                        </header>
+                        @if (message.title) { <h2>{{ message.title }}</h2> }
+
+                        @if (editingNoteId() === message.id) {
+                          <form class="pd-note-edit" (submit)="$event.preventDefault(); saveEditNote()">
+                            <textarea rows="3" [ngModel]="noteEditDraft()" (ngModelChange)="noteEditDraft.set($event)" name="noteEditDraft"></textarea>
+                            <footer>
+                              <button type="button" class="pd-dialog-cancel" (click)="cancelEditNote()">Vazgeç</button>
+                              <button type="submit" class="pd-dialog-primary" [disabled]="savingNoteEdit()">{{ savingNoteEdit() ? 'Kaydediliyor…' : 'Kaydet' }}</button>
+                            </footer>
+                          </form>
+                        } @else {
+                          @for (paragraph of message.paragraphs; track paragraph) { <p>{{ paragraph }}</p> }
+                        }
+
+                        @if (message.attachments?.length) {
+                          <div class="pd-attachments">
+                            @for (attachment of message.attachments; track attachment.id) {
+                              <button type="button" (click)="downloadDocument(attachment)"><app-icon name="download" [size]="14" />{{ attachment.name }}</button>
+                            }
+                          </div>
+                        }
+                      </article>
+                    }
+                  </div>
+
+                  @if (commentAttachments().length) {
+                    <div class="pd-composer-attachments">
+                      @for (file of commentAttachments(); track file.name; let i = $index) {
+                        <span>{{ file.name }} <button type="button" [attr.aria-label]="'Eki kaldır: ' + file.name" (click)="removeCommentAttachment(i)"><app-icon name="x" [size]="11" /></button></span>
+                      }
+                    </div>
+                  }
+                  <form class="pd-composer" (submit)="$event.preventDefault(); sendComment()">
+                    <label class="pd-composer-attach" aria-label="Dosya ekle" title="Dosya ekle">
+                      <app-icon name="paperclip" [size]="17" />
+                      <input type="file" multiple (change)="onCommentFileSelected($event)" />
+                    </label>
+                    <label class="pd-composer-textarea-wrap">
+                      <span class="sr-only">Proje açıklaması ekleyin</span>
+                      <textarea
+                        #composerInput
+                        class="pd-composer-textarea"
+                        rows="1"
+                        placeholder="Açıklama Ekleyin"
+                        [ngModel]="commentDraft()"
+                        (ngModelChange)="commentDraft.set($event)"
+                        (input)="autoGrowComposer(composerInput)"
+                        (keydown)="onComposerKeydown($event)"
+                        name="comment"
+                      ></textarea>
+                    </label>
+                    <button class="pd-send" type="submit" [disabled]="sendingComment()">{{ sendingComment() ? 'Gönderiliyor…' : 'Gönder' }}</button>
+                  </form>
+                </section>
+              }
+
+              @case ('tasks') {
+                <section class="pd-seq" aria-label="Proje görevleri">
+                  <header class="pd-seq-head">
+                    <div class="pd-seq-head-title">
+                      <span class="pd-seq-head-icon"><app-icon name="tasks" [size]="17" /></span>
+                      <div>
+                        <h2>Görevler</h2>
+                        <p>{{ taskStatusCounts().all }} ana görev · {{ taskSubtaskTotal() }} alt görev</p>
+                      </div>
+                    </div>
+                    <button class="pd-new-task" type="button" (click)="openTaskDialog()">
+                      <app-icon name="plus" [size]="15" /><span>Yeni görev oluştur</span>
+                    </button>
+                  </header>
+
+                  <div class="pd-seq-filters">
+                    <button type="button" [class.is-active]="taskListFilter() === 'all'" (click)="setTaskListFilter('all')">
+                      Tümü <span>{{ taskStatusCounts().all }}</span>
+                    </button>
+                    <button type="button" [class.is-active]="taskListFilter() === 'InProgress'" (click)="setTaskListFilter('InProgress')">
+                      Devam Ediyor <span>{{ taskStatusCounts().InProgress }}</span>
+                    </button>
+                    <button type="button" [class.is-active]="taskListFilter() === 'Todo'" (click)="setTaskListFilter('Todo')">
+                      Bekliyor <span>{{ taskStatusCounts().Todo }}</span>
+                    </button>
+                    <button type="button" [class.is-active]="taskListFilter() === 'Done'" (click)="setTaskListFilter('Done')">
+                      Tamamlandı <span>{{ taskStatusCounts().Done }}</span>
+                    </button>
+                    @if (taskStatusCounts().ai) {
+                      <button type="button" class="pd-seq-filter--ai" [class.is-active]="taskListFilter() === 'ai'" (click)="setTaskListFilter('ai')">
+                        <span class="pd-seq-ai-dot"></span> AI kaynaklı <span>{{ taskStatusCounts().ai }}</span>
+                      </button>
+                    }
+                    @if (taskStatusCounts().unassigned) {
+                      <button type="button" class="pd-seq-filter--unassigned" [class.is-active]="taskListFilter() === 'unassigned'" (click)="setTaskListFilter('unassigned')">
+                        <app-icon name="alert" [size]="12" /> Atanmamış <span>{{ taskStatusCounts().unassigned }}</span>
+                      </button>
+                    }
+                    <div class="pd-seq-filters-spacer"></div>
+                    <button type="button" (click)="toggleAllTaskRows()">{{ allTaskRowsExpanded() ? 'Tümünü kapat' : 'Tümünü aç' }}</button>
+                  </div>
+
+                  <div class="pd-seq-list">
+                    @for (row of unifiedSequenceRows(); track trackSequenceRow(row); let i = $index) {
+                    @if (row.kind === 'task') {
+                      @let entry = row.entry;
+                      <article class="pd-task-card" [class.is-ai]="entry.task.isAiGenerated" [class.is-done]="entry.task.status === 'Done'">
+                      <div
+                        class="pd-seq-row"
+                        [class.is-ai]="entry.task.isAiGenerated"
+                        [class.is-done]="entry.task.status === 'Done'"
+                        [class.has-subtasks]="entry.subtasks.length > 0"
+                        [class.is-expanded]="isTaskRowExpanded(entry.task.id)"
+                        [attr.tabindex]="entry.subtasks.length ? 0 : null"
+                        [attr.aria-expanded]="entry.subtasks.length ? isTaskRowExpanded(entry.task.id) : null"
+                        (click)="onTaskRowClick($event, entry.task.id, entry.subtasks.length > 0)"
+                        (keydown)="onTaskRowKeydown($event, entry.task.id, entry.subtasks.length > 0)"
+                      >
+                        <div class="pd-status-control">
+                          <button
+                            type="button"
+                            class="pd-task-state"
+                            [class]="'is-' + entry.task.status.toLowerCase()"
+                            [disabled]="savingStatusTaskId() === entry.task.id || !canChangeTaskStatus(entry.task)"
+                            [attr.aria-label]="entry.task.title + ' durumunu değiştir'"
+                            (click)="$event.stopPropagation(); toggleStatusMenu(entry.task.id)"
+                          >
+                            @if (entry.task.status === 'Done') { <app-icon name="check" [size]="11" /> }
+                            @if (entry.task.status === 'InProgress') { <span class="pd-task-state-dot"></span> }
+                          </button>
+                          @if (openStatusMenuId() === entry.task.id) {
+                            <div class="pd-status-menu" (click)="$event.stopPropagation()">
+                              @for (status of ['Todo', 'InProgress', 'Done']; track status) {
+                                <button type="button" [class.is-selected]="entry.task.status === status" (click)="selectTaskStatus(entry.groupId, entry.task, $any(status))">
+                                  <span class="pd-status-menu-dot" [class]="'is-' + status.toLowerCase()"></span>{{ taskStatusLabel($any(status)) }}
+                                  @if (entry.task.status === status) { <app-icon name="check" [size]="12" /> }
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                        <span class="pd-seq-index">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                        @if (entry.subtasks.length) {
+                          <app-icon class="pd-seq-chevron" name="chevron-right" [size]="14" />
+                        }
+                        <div class="pd-seq-main">
+                          <div class="pd-seq-title-line">
+                            <h3>{{ entry.task.title }}</h3>
+                            @if (entry.task.isAiGenerated) { <span class="pd-pill pd-pill--ai">AI</span> }
+                            <button type="button" class="pd-pill pd-status-pill" [class]="'pd-pill--' + entry.task.status.toLowerCase()" [disabled]="!canChangeTaskStatus(entry.task)" (click)="$event.stopPropagation(); toggleStatusMenu(entry.task.id)">{{ taskStatusLabel(entry.task.status) }}</button>
+                          </div>
+                          <div class="pd-seq-meta-line">
+                            <div class="pd-task-owner-wrap">
+                              <button
+                                type="button"
+                                class="pd-owner-chip"
+                                [class.is-unassigned]="isTaskUnassigned(entry.task)"
+                                [disabled]="!canManageProjects()"
+                                [attr.title]="canManageProjects() ? (isTaskUnassigned(entry.task) ? 'Sorumlu ata' : 'Sorumluyu değiştir') : 'Görev sorumlusu'"
+                                (click)="$event.stopPropagation(); openReassignPopover(entry.groupId, entry.task)"
+                              >
+                                <span class="pd-owner-avatar">
+                                  @if (isTaskUnassigned(entry.task)) { <app-icon name="alert" [size]="11" /> } @else { {{ taskInitials(entry.task.assignee) }} }
+                                </span>
+                                <strong>{{ isTaskUnassigned(entry.task) ? 'Atanmamış' : entry.task.assignee }}</strong>
+                                @if (entry.task.department && !isTaskUnassigned(entry.task)) { <small>· {{ entry.task.department }}</small> }
+                              </button>
+                              @if (reassignTaskContext()?.taskId === entry.task.id) {
+                                <div class="pd-reassign-popover" (click)="$event.stopPropagation()">
+                                  <strong>Sorumluyu değiştir</strong>
+                                  <select [ngModel]="reassignEmployeeId()" (ngModelChange)="reassignEmployeeId.set($event)">
+                                    <option value="">Çalışan seçiniz</option>
+                                    @for (employee of allEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }} · {{ employee.departmentName || 'Departmansız' }}</option> }
+                                  </select>
+                                  <div class="pd-reassign-actions">
+                                    <button type="button" (click)="closeReassignPopover()">Vazgeç</button>
+                                    <button type="button" class="pd-reassign-save" [disabled]="savingReassign() || !reassignEmployeeId()" (click)="saveReassign()">{{ savingReassign() ? '...' : 'Ata' }}</button>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                            @if (taskDateRange(entry); as range) { <span>{{ range }}</span> }
+                            @if (entry.task.effortHours || entry.subtasks.length) { <span>{{ taskTotalHours(entry) }} sa</span> }
+                            @if (taskUserCommentCount(entry.task)) {
+                              <button type="button" class="pd-task-comment-count" (click)="$event.stopPropagation(); openTaskComments(entry.groupId, entry.task.id)">
+                                <app-icon name="comment" [size]="12" /> {{ taskUserCommentCount(entry.task) }} yorum
+                              </button>
+                            }
+                            @if (entry.task.status === 'Done' && entry.task.completedAtUtc) {
+                              <span class="pd-completed-meta"><app-icon name="check" [size]="11" /> {{ entry.task.completedBy || entry.task.assignee }} · {{ formatDateTime(entry.task.completedAtUtc) }}</span>
+                            }
+                          </div>
+                          @if (entry.subtasks.length) {
+                            <div class="pd-subtask-progress">
+                              <span>{{ completedSubtaskCount(entry) }}/{{ entry.subtasks.length }} alt görev tamamlandı</span>
+                              <i><b [style.width.%]="taskProgressPercent(entry)"></b></i>
+                            </div>
+                          }
+                        </div>
+                        <div class="pd-seq-actions">
+                          <div class="pd-seq-add-wrap">
+                            <button type="button" class="pd-seq-icon-btn" aria-label="Görev işlemleri" (click)="$event.stopPropagation(); toggleTaskMenu(entry.task.id)"><app-icon name="more" [size]="17" /></button>
+                            @if (openTaskMenuId() === entry.task.id) {
+                              <div class="pd-task-menu">
+                                @if (canManageProjects()) {
+                                  <button type="button" (click)="openEditTaskDialog(entry.groupId, entry.task)"><app-icon name="edit" [size]="14" /> Görevi düzenle</button>
+                                  <button type="button" (click)="openInlineSubtaskForm(entry.groupId, entry.task)"><app-icon name="plus" [size]="14" /> Alt görev ekle</button>
+                                  <button type="button" (click)="copyTask(entry.groupId, entry.task)"><app-icon name="layers" [size]="14" /> Kopyala</button>
+                                  <span class="pd-task-menu-divider"></span>
+                                  <button type="button" class="is-danger" (click)="openArchiveTaskConfirmation(entry.groupId, entry.task, entry.subtasks.length)"><app-icon name="trash" [size]="14" /> Arşivle</button>
+                                }
+                                <span class="pd-task-menu-divider"></span>
+                                <button type="button" (click)="openTaskComments(entry.groupId, entry.task.id)"><app-icon name="comment" [size]="14" /> Yorumları aç</button>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      @if (inlineSubtaskContext()?.parentTaskId === entry.task.id) {
+                        <form class="pd-inline-subtask" (submit)="$event.preventDefault(); saveInlineSubtask()">
+                          <span class="pd-inline-subtask-branch" aria-hidden="true"></span>
+                          <label class="pd-inline-subtask-title">
+                            <span>Alt görev</span>
+                            <input type="text" name="inlineSubtaskTitle" autofocus placeholder="Yapılacak işi kısa ve net yazın" [ngModel]="inlineSubtaskDraft().title" (ngModelChange)="updateInlineSubtaskDraft('title', $event)" />
+                          </label>
+                          <label>
+                            <span>Atanan kişi</span>
+                            <select name="inlineSubtaskAssignee" [ngModel]="inlineSubtaskDraft().assigneeEmployeeId" (ngModelChange)="updateInlineSubtaskDraft('assigneeEmployeeId', $event)">
+                              <option value="">Seçiniz</option>
+                              @for (employee of allEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }}</option> }
+                            </select>
+                          </label>
+                          <label class="pd-inline-subtask-effort">
+                            <span>Efor</span>
+                            <input type="number" min="1" step="1" name="inlineSubtaskEffort" placeholder="Saat" [ngModel]="inlineSubtaskDraft().effortHours" (ngModelChange)="updateInlineSubtaskDraft('effortHours', $event)" />
+                          </label>
+                          <div class="pd-inline-subtask-actions">
+                            <button type="button" (click)="cancelInlineSubtask()">Vazgeç</button>
+                            <button type="submit" class="is-primary" [disabled]="savingInlineSubtask()">{{ savingInlineSubtask() ? 'Ekleniyor…' : 'Ekle' }}</button>
+                          </div>
+                          @if (inlineSubtaskError()) { <p>{{ inlineSubtaskError() }}</p> }
+                        </form>
+                      }
+
+                      @if (entry.subtasks.length && isTaskRowExpanded(entry.task.id)) {
+                        <div class="pd-seq-subtasks">
+                          @for (sub of entry.subtasks; track sub.id; let subIndex = $index) {
+                            <div class="pd-seq-subtask" [class.is-done]="sub.status === 'Done'" [class.is-unassigned]="isTaskUnassigned(sub)">
+                              <div class="pd-status-control">
+                                <button class="pd-task-state" type="button" [class]="'is-' + sub.status.toLowerCase()" [disabled]="savingStatusTaskId() === sub.id || !canChangeTaskStatus(sub)" [attr.aria-label]="sub.title + ' durumunu değiştir'" (click)="toggleStatusMenu(sub.id)">
+                                  @if (sub.status === 'Done') { <app-icon name="check" [size]="10" /> }
+                                  @if (sub.status === 'InProgress') { <span class="pd-task-state-dot"></span> }
+                                </button>
+                                @if (openStatusMenuId() === sub.id) {
+                                  <div class="pd-status-menu">
+                                    @for (status of ['Todo', 'InProgress', 'Done']; track status) {
+                                      <button type="button" [class.is-selected]="sub.status === status" (click)="selectTaskStatus(entry.groupId, sub, $any(status))">
+                                        <span class="pd-status-menu-dot" [class]="'is-' + status.toLowerCase()"></span>{{ taskStatusLabel($any(status)) }}
+                                        @if (sub.status === status) { <app-icon name="check" [size]="12" /> }
+                                      </button>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                              <span class="pd-seq-subtask-index">{{ subIndex + 1 }}</span>
+                              <span class="pd-seq-subtask-title" [class.is-done]="sub.done">{{ sub.title }}</span>
+                              @if (sub.isAiGenerated) { <span class="pd-pill pd-pill--ai">AI</span> }
+                              <span class="pd-pill" [class]="'pd-pill--' + sub.status.toLowerCase()">{{ taskStatusLabel(sub.status) }}</span>
+                              @if (sub.effortHours) { <small>{{ sub.effortHours }} sa</small> }
+                              <div class="pd-task-owner-wrap pd-task-owner-wrap--subtask">
+                                <button
+                                  type="button"
+                                  class="pd-owner-chip pd-owner-chip--compact"
+                                  [class.is-unassigned]="isTaskUnassigned(sub)"
+                                  [disabled]="!canManageProjects()"
+                                  [attr.title]="canManageProjects() ? (isTaskUnassigned(sub) ? 'Sorumlu ata' : 'Sorumluyu değiştir') : 'Alt görev sorumlusu'"
+                                  (click)="openReassignPopover(entry.groupId, sub)"
+                                >
+                                  <span class="pd-owner-avatar">@if (isTaskUnassigned(sub)) { <app-icon name="alert" [size]="10" /> } @else { {{ taskInitials(sub.assignee) }} }</span>
+                                  <strong>{{ isTaskUnassigned(sub) ? 'Atanmamış' : sub.assignee }}</strong>
+                                </button>
+                                @if (reassignTaskContext()?.taskId === sub.id) {
+                                  <div class="pd-reassign-popover">
+                                    <strong>Sorumluyu değiştir</strong>
+                                    <select [ngModel]="reassignEmployeeId()" (ngModelChange)="reassignEmployeeId.set($event)">
+                                      <option value="">Çalışan seçiniz</option>
+                                      @for (employee of allEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }} · {{ employee.departmentName || 'Departmansız' }}</option> }
+                                    </select>
+                                    <div class="pd-reassign-actions"><button type="button" (click)="closeReassignPopover()">Vazgeç</button><button type="button" class="pd-reassign-save" [disabled]="savingReassign() || !reassignEmployeeId()" (click)="saveReassign()">{{ savingReassign() ? '...' : 'Ata' }}</button></div>
+                                  </div>
+                                }
+                              </div>
+                              @if (sub.status === 'Done' && sub.completedAtUtc) { <small class="pd-subtask-completed">{{ sub.completedBy || sub.assignee }} · {{ formatDateTime(sub.completedAtUtc) }}</small> }
+                              @if (taskUserCommentCount(sub)) {
+                                <button type="button" class="pd-seq-subtask-comments" (click)="openTaskComments(entry.groupId, sub.id)"><app-icon name="comment" [size]="12" />{{ taskUserCommentCount(sub) }}</button>
+                              }
+                              <div class="pd-seq-subtask-actions">
+                                <button type="button" class="pd-seq-icon-btn" [attr.aria-label]="sub.title + ' işlemleri'" (click)="toggleTaskMenu(sub.id)"><app-icon name="more" [size]="16" /></button>
+                                @if (openTaskMenuId() === sub.id) {
+                                  <div class="pd-task-menu">
+                                    @if (canManageProjects()) {
+                                      <button type="button" (click)="openEditTaskDialog(entry.groupId, sub)"><app-icon name="edit" [size]="14" /> Görevi düzenle</button>
+                                      <button type="button" (click)="copyTask(entry.groupId, sub)"><app-icon name="layers" [size]="14" /> Kopyala</button>
+                                      <span class="pd-task-menu-divider"></span>
+                                      <button type="button" class="is-danger" (click)="openArchiveTaskConfirmation(entry.groupId, sub)"><app-icon name="trash" [size]="14" /> Arşivle</button>
+                                    }
+                                    <span class="pd-task-menu-divider"></span>
+                                    <button type="button" (click)="openTaskComments(entry.groupId, sub.id)"><app-icon name="comment" [size]="14" /> Yorumları aç</button>
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                      </article>
+                    } @else {
+                      @let pending = row.pending;
+                      <article class="pd-task-card is-ai">
+                        <div class="pd-seq-row is-ai">
+                          <span class="pd-seq-index pd-seq-index--pending" title="Onaylanırsa bu sıraya girer">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                          <div class="pd-seq-main">
+                            <div class="pd-seq-title-line">
+                              <h3>{{ pending.title }}</h3>
+                              <span class="pd-pill pd-pill--ai">AI</span>
+                              <span class="pd-pill pd-pill--warning">Onay bekliyor</span>
+                            </div>
+                            <div class="pd-seq-meta-line">
+                              <span class="pd-pill pd-pill--muted">{{ pending.department }}</span>
+                              <span>{{ pending.effortHours }} sa</span>
+                              @if (pending.activityCount) { <span>{{ pending.activityCount }} alt görev önerisi</span> }
+                            </div>
+                            @if (pending.sequenceNote) {
+                              <p class="pd-pending-sequence-note"><app-icon name="clock" [size]="12" /> {{ pending.sequenceNote }}</p>
+                            }
+                          </div>
+                          <div class="pd-seq-actions">
+                            <button type="button" class="pd-pending-review-link" (click)="selectTab('ai')">
+                              Öneriyi incele <app-icon name="arrow-right" [size]="12" />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    }
+                    } @empty {
+                      <p class="pd-empty-note">Bu proje için henüz görev yok. "Yeni Görev Oluştur" ile ilkini ekleyebilirsiniz.</p>
+                    }
+                  </div>
+
+                  @if (sequencedTasks().length || pendingAiSuggestions().length || (canManageProjects() && archivedTasks().length)) {
+                    <footer class="pd-seq-footer">
+                      <span class="pd-pill pd-pill--ai">AI</span>
+                      <p>rozetli satırlar bir iş paketinden geldi.</p>
+                      <div class="pd-seq-filters-spacer"></div>
+                      @if (canManageProjects()) {
+                        <button type="button" class="pd-seq-footer-archive" (click)="openArchiveList()">
+                          <app-icon name="trash" [size]="13" /> Arşivlenenler
+                          @if (archivedTasks().length) { <span>{{ archivedTasks().length }}</span> }
+                        </button>
+                      }
+                      <span class="pd-seq-footer-summary">
+                        {{ sequencedTasks().length }} görev · {{ taskSubtaskTotal() }} alt görev
+                        @if (taskStatusCounts().ai) { · {{ taskStatusCounts().ai }} AI kaynaklı }
+                        @if (pendingAiSuggestions().length) { · {{ pendingAiSuggestions().length }} onay bekliyor }
+                      </span>
+                    </footer>
+                  }
+                </section>
+              }
+
+              @case ('assistant') {
+                <app-project-guide-panel
+                  [context]="projectGuideContext()"
+                  [currentUserName]="currentUserName()"
+                />
+              }
+
+              @case ('ai') {
+                <app-ai-work-package-panel
+                  [project]="{ id: project().id, name: project().name, type: project().type, unit: project().unit }"
+                  [documents]="documents()"
+                  (approved)="onAiSuggestionApproved()"
+                  (jumpToTasks)="selectTab('tasks')"
+                />
+              }
+
+              @case ('documents') {
+                <section class="pd-documents" aria-label="Proje dokümanları">
+                  <div class="pd-document-grid">
+                    @for (document of documents(); track document.id) {
+                      <article class="pd-document-card">
+                        <div class="pd-file-preview">
+                          <app-file-type-icon [kind]="document.kind" [size]="84" [label]="document.name + ' dosya türü'" />
+                        </div>
+                        <strong [title]="document.name">{{ document.name }}</strong>
+                        <footer>
+                          <span>{{ document.size }}</span>
+                          <span>
+                            <button type="button" [attr.aria-label]="document.name + ' dosyasını indir'" (click)="downloadDocument(document)">
+                              İndir <app-icon name="download" [size]="13" />
+                            </button>
+                            @if (canManageProjects()) {
+                              <button
+                                class="pd-document-delete"
+                                type="button"
+                                style="margin-left: 0.65rem; color: #c83b4f"
+                                [attr.aria-label]="document.name + ' dosyasını sil'"
+                                [disabled]="!!deletingDocumentId()"
+                                (click)="openDocumentDeleteConfirmation(document)"
+                              >
+                                <app-icon name="trash" [size]="13" /> Sil
+                              </button>
+                            }
+                          </span>
+                        </footer>
+                      </article>
+                    } @empty {
+                      <p class="pd-empty-note">Bu kapsamda döküman bulunamadı.</p>
+                    }
+                  </div>
+
+                  <div class="pd-upload-zone">
+                    <span class="pd-upload-zone-icon"><app-icon name="upload" [size]="20" /></span>
+                    <p class="pd-upload-zone-text">Projeye yeni bir doküman ekleyin</p>
+                    <button class="pd-upload-trigger" type="button" (click)="openUploadDialog()">
+                      <app-icon name="plus" [size]="16" /><span>Dosya Seç</span>
+                    </button>
+                  </div>
+                </section>
+              }
+
+              @case ('feasibility') {
+                <section class="pd-feasibility" aria-label="Proje fizibilitesi">
+                  <div class="pd-feasibility-summary">
+                    <div><span>Toplam Talep Edilen</span><strong>{{ feasibilityTotalRequested() }}</strong></div>
+                    <div><span>Toplam Onaylanan</span><strong>{{ feasibilityTotalApproved() }}</strong></div>
+                    <button class="pd-feasibility-add-group" type="button" (click)="openMainGroupDialog()">
+                      <app-icon name="plus" [size]="18" /> Ana Grup Ekle
+                    </button>
+                  </div>
+
+                  @for (group of feasibilityGroups(); track group.id) {
+                    <section class="pd-feasibility-group">
+                      <header>
+                        <strong>{{ group.name }}</strong>
+                        <span>Talep: {{ formatFeasibilityAmount(group.totalRequestedAmount, 'TRY') }} · Onaylı: {{ formatFeasibilityAmount(group.totalApprovedAmount, 'TRY') }}</span>
+                        <button type="button" (click)="openItemDialog(group.id)">Kalem Ekle <app-icon name="plus" [size]="14" /></button>
+                      </header>
+
+                      @for (item of group.items; track item.id) {
+                        <article class="pd-feasibility-item">
+                          <div class="pd-feasibility-item-info">
+                            <strong>{{ item.unit }}</strong>
+                            <small>{{ item.description }}</small>
+                          </div>
+                          <span class="pd-feasibility-amount">{{ formatFeasibilityAmount(item.amount, item.currency) }}</span>
+                          <em [class]="'pd-feasibility-status pd-feasibility-status--' + item.status.toLowerCase()">
+                            {{ feasibilityStatusLabel(item.status) }}
+                          </em>
+
+                          @if (item.status === 'Draft') {
+                            <button class="pd-feasibility-submit" type="button" (click)="openSubmitDialog(group.id, item.id)">Onaya Gönder</button>
+                          }
+                          @if (item.status === 'PendingApproval') {
+                            <button class="pd-ai-dismiss" type="button" (click)="openDecideDialog(group.id, item, false)">Reddet</button>
+                            <button class="pd-ai-approve" type="button" (click)="openDecideDialog(group.id, item, true)">Onayla</button>
+                          }
+
+                          @if (item.steps.length) {
+                            <ol class="pd-feasibility-steps" aria-label="Onay geçmişi">
+                              @for (step of item.steps; track step.id) {
+                                <li [class]="'pd-feasibility-step pd-feasibility-step--' + step.decision.toLowerCase()">
+                                  <span>{{ step.order + 1 }}. {{ step.approverName }} — {{ feasibilityDecisionLabel(step.decision) }}</span>
+                                  @if (step.comment) { <small>"{{ step.comment }}"</small> }
+                                </li>
+                              }
+                            </ol>
+                          }
+                        </article>
+                      } @empty {
+                        <p class="pd-empty-note">Bu ana grupta henüz bütçe kalemi yok.</p>
+                      }
+                    </section>
+                  } @empty {
+                    <p class="pd-empty-note">Bu proje için henüz fizibilite ana grubu oluşturulmadı.</p>
+                  }
+                </section>
+              }
+
+              @case ('activity') {
+                <section class="pd-activity" aria-label="Proje akışı">
+                  <ul class="pd-activity-list" aria-label="Proje akış kayıtları">
+                    @for (item of activityFeed(); track item.id) {
+                      <li>
+                        <app-icon name="hash" [size]="13" />
+                        <div>
+                          <small>{{ item.context }}</small>
+                          <p>
+                            {{ item.segment.prefix }}<strong>{{ item.segment.entity }}</strong>{{ item.segment.middle
+                            }}@if (item.segment.status) {
+                              <b [class.is-success]="item.segment.statusTone === 'success'" [class.is-danger]="item.segment.statusTone === 'danger'">{{ item.segment.status }}</b>
+                            }
+                          </p>
+                        </div>
+                        <time>{{ item.dateLabel }}</time>
+                      </li>
+                    } @empty {
+                      <li class="pd-empty-note">Bu kapsamda henüz bir akış kaydı yok.</li>
+                    }
+                  </ul>
+                </section>
+              }
+            }
+
+            @if (documentDeleteConfirmation(); as deletion) {
+              <div class="pd-dialog-layer pd-dialog-layer--confirm" (click)="closeDocumentDeleteConfirmation()">
+                <section class="pd-dialog pd-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-document-title" (click)="$event.stopPropagation()">
+                  <span class="pd-confirm-dialog-icon"><app-icon name="trash" [size]="22" /></span>
+                  <div>
+                    <h2 id="delete-document-title">Doküman silinsin mi?</h2>
+                    <p><strong>{{ deletion.document.name }}</strong> proje dokümanlarından kalıcı olarak silinecek.</p>
+                    <p class="pd-confirm-dialog-warning">Bu işlem geri alınamaz.</p>
+                  </div>
+                  <footer>
+                    <button type="button" (click)="closeDocumentDeleteConfirmation()" [disabled]="!!deletingDocumentId()">Vazgeç</button>
+                    <button type="button" class="is-danger" (click)="confirmDeleteDocument()" [disabled]="!!deletingDocumentId()">
+                      {{ deletingDocumentId() ? 'Siliniyor…' : 'Sil' }}
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            }
+
+            @if (taskDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeDialogs()">
+                <form class="pd-dialog pd-task-dialog" role="dialog" aria-modal="true" aria-labelledby="new-task-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveTask()">
+                  <header>
+                    <h2 id="new-task-title">{{ taskDialogMode() === 'edit' ? 'Görevi Düzenle' : 'Yeni Görev Oluştur' }}</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+
+                  <div class="pd-dialog-body">
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Görev Başlığı</span>
+                      <input type="text" name="taskTitle" autofocus [ngModel]="taskDraft().title" (ngModelChange)="updateTaskDraft('title', $event)" />
+                    </label>
+
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Atanan Kişi</span>
+                      <select name="assigneeEmployeeId" [ngModel]="taskDraft().assigneeEmployeeId" (ngModelChange)="updateTaskDraft('assigneeEmployeeId', $event)">
+                        <option value="">Seçiniz</option>
+                        @for (employee of allEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }}</option> }
+                      </select>
+                    </label>
+
+                    @if (taskDialogMode() === 'create') {
+                      <div class="pd-dialog-row pd-dialog-row--parent">
+                        <label class="pd-dialog-field">
+                          <span>Üst Görev</span>
+                          <select
+                            name="dependsOnTaskId"
+                            [ngModel]="taskDraft().dependsOnTaskId"
+                            (ngModelChange)="updateTaskDraft('dependsOnTaskId', $event)"
+                            [disabled]="taskDraft().isMainTask"
+                          >
+                            <option value="">Seçiniz</option>
+                            @for (task of currentGroupTasks(); track task.id) {
+                              @if (task.isMainTask) { <option [value]="task.id">{{ task.title }}</option> }
+                            }
+                          </select>
+                        </label>
+                        <label class="pd-main-task-check">
+                          <input type="checkbox" name="mainTask" [ngModel]="taskDraft().isMainTask" (ngModelChange)="updateTaskDraft('isMainTask', $event)" />
+                          <span>Ana Görev</span>
+                        </label>
+                      </div>
+                    }
+
+                    <div class="pd-dialog-row">
+                      <label class="pd-dialog-field"><span>Başlangıç Tarihi</span><input type="date" name="startDate" [ngModel]="taskDraft().startDate" (ngModelChange)="updateTaskDraft('startDate', $event)" /></label>
+                      <label class="pd-dialog-field"><span>Saat</span><input type="time" name="startTime" [ngModel]="taskDraft().startTime" (ngModelChange)="updateTaskDraft('startTime', $event)" /></label>
+                    </div>
+
+                    <div class="pd-dialog-row">
+                      <label class="pd-dialog-field"><span>Son Bitiş Tarihi</span><input type="date" name="endDate" [ngModel]="taskDraft().endDate" (ngModelChange)="updateTaskDraft('endDate', $event)" /></label>
+                      <label class="pd-dialog-field"><span>Saat</span><input type="time" name="endTime" [ngModel]="taskDraft().endTime" (ngModelChange)="updateTaskDraft('endTime', $event)" /></label>
+                    </div>
+
+                    <div class="pd-dialog-row">
+                      <label class="pd-dialog-field">
+                        <span>Kategori</span>
+                        <select name="category" [ngModel]="taskDraft().category" (ngModelChange)="updateTaskDraft('category', $event)">
+                          <option value="">Seçiniz</option>
+                          @for (option of taskCategories; track option) { <option [value]="option">{{ option }}</option> }
+                        </select>
+                      </label>
+                      <label class="pd-dialog-field">
+                        <span>Tahmini Efor (saat)</span>
+                        <input type="number" min="1" step="1" name="effortHours" [ngModel]="taskDraft().effortHours" (ngModelChange)="updateTaskDraft('effortHours', $event)" />
+                      </label>
+                    </div>
+
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Departman</span>
+                      <input type="text" name="department" [value]="taskDraftDepartmentName() || 'Kişi seçiniz'" disabled />
+                    </label>
+
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Açıklama</span>
+                      <textarea name="description" rows="3" [ngModel]="taskDraft().description" (ngModelChange)="updateTaskDraft('description', $event)"></textarea>
+                    </label>
+
+                    @if (taskFormError()) { <p class="pd-dialog-error">{{ taskFormError() }}</p> }
+                  </div>
+
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="savingTask()">{{ savingTask() ? 'Kaydediliyor…' : (taskDialogMode() === 'edit' ? 'Değişiklikleri Kaydet' : 'Görevi Oluştur') }}</button></footer>
+                </form>
+              </div>
+            }
+
+            @if (statusConfirmation(); as statusChange) {
+              <div class="pd-dialog-layer pd-dialog-layer--confirm" (click)="closeStatusConfirmation()">
+                <section class="pd-dialog pd-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reopen-task-title" (click)="$event.stopPropagation()">
+                  <span class="pd-confirm-dialog-icon pd-confirm-dialog-icon--status"><app-icon name="clock" [size]="22" /></span>
+                  <div>
+                    <h2 id="reopen-task-title">Görev yeniden açılsın mı?</h2>
+                    <p><strong>{{ statusChange.task.title }}</strong> görevi {{ taskStatusLabel(statusChange.nextStatus) }} durumuna alınacak.</p>
+                    <p class="pd-confirm-dialog-note">Tamamlanma bilgisi kaldırılır; durum değişikliği görev geçmişine kaydedilir.</p>
+                  </div>
+                  <footer>
+                    <button type="button" (click)="closeStatusConfirmation()" [disabled]="!!savingStatusTaskId()">Vazgeç</button>
+                    <button type="button" class="is-primary" (click)="confirmTaskReopen()" [disabled]="!!savingStatusTaskId()">{{ savingStatusTaskId() ? 'Güncelleniyor…' : 'Yeniden aç' }}</button>
+                  </footer>
+                </section>
+              </div>
+            }
+
+            @if (taskCommentContext(); as commentContext) {
+              @if (taskCommentTask(); as commentTask) {
+                <div class="pd-dialog-layer" (click)="closeTaskComments()">
+                  <section class="pd-dialog pd-task-comments-dialog" role="dialog" aria-modal="true" aria-labelledby="task-comments-title" (click)="$event.stopPropagation()">
+                    <header>
+                      <div>
+                        <h2 id="task-comments-title">Görev yorumları</h2>
+                        <p>{{ commentTask.title }}</p>
+                      </div>
+                      <button type="button" aria-label="Yorumları kapat" (click)="closeTaskComments()"><app-icon name="x" [size]="14" /></button>
+                    </header>
+                    <div class="pd-task-comment-list">
+                      @for (comment of commentTask.commentEntries; track comment.id) {
+                        <article [class.is-activity]="isTaskActivityComment(comment)">
+                          <span class="pd-task-comment-avatar">
+                            @if (isTaskActivityComment(comment)) { <app-icon name="clock" [size]="13" /> } @else { {{ taskInitials(comment.author) }} }
+                          </span>
+                          <div>
+                            <header>
+                              <strong>{{ isTaskActivityComment(comment) ? 'Görev hareketi' : (comment.author || 'Kullanıcı') }}</strong>
+                              <time>{{ formatDateTime(comment.createdAtUtc) }}</time>
+                            </header>
+                            <p>{{ comment.text }}</p>
+                          </div>
+                        </article>
+                      } @empty {
+                        <div class="pd-task-comment-empty">
+                          <app-icon name="comment" [size]="21" />
+                          <strong>Henüz yorum yok</strong>
+                          <span>İlk yorumu ekleyerek görevle ilgili önemli bilgileri ekipte görünür hale getirin.</span>
+                        </div>
+                      }
+                    </div>
+                    <form class="pd-task-comment-composer" (submit)="$event.preventDefault(); saveTaskComment()">
+                      <label for="task-comment-input">Yeni yorum</label>
+                      <textarea
+                        id="task-comment-input"
+                        name="taskComment"
+                        rows="3"
+                        maxlength="1000"
+                        placeholder="Ekip için açıklama, karar veya güncelleme yazın…"
+                        [ngModel]="taskCommentDraft()"
+                        (ngModelChange)="taskCommentDraft.set($event)"
+                      ></textarea>
+                      <footer>
+                        <small>{{ taskCommentDraft().length }}/1000</small>
+                        <button type="submit" [disabled]="savingTaskComment() || !taskCommentDraft().trim()">
+                          <app-icon name="send" [size]="13" /> {{ savingTaskComment() ? 'Ekleniyor…' : 'Yorum ekle' }}
+                        </button>
+                      </footer>
+                    </form>
+                  </section>
+                </div>
+              }
+            }
+
+            @if (archiveTaskContext(); as archive) {
+              <div class="pd-dialog-layer pd-dialog-layer--confirm" (click)="closeArchiveTaskConfirmation()">
+                <section class="pd-dialog pd-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="archive-task-title" (click)="$event.stopPropagation()">
+                  <span class="pd-confirm-dialog-icon"><app-icon name="trash" [size]="22" /></span>
+                  <div>
+                    <h2 id="archive-task-title">Görev arşivlensin mi?</h2>
+                    <p><strong>{{ archive.task.title }}</strong> aktif görev listesinden kaldırılacak.</p>
+                    @if (archive.childCount) {
+                      <p class="pd-confirm-dialog-warning">Bu ana görevle birlikte {{ archive.childCount }} alt görev de arşivlenecek.</p>
+                    } @else {
+                      <p class="pd-confirm-dialog-note">Görev kalıcı olarak silinmez; proje geçmişindeki AI/kullanıcı kaynak bilgisi korunur.</p>
+                    }
+                  </div>
+                  <footer>
+                    <button type="button" (click)="closeArchiveTaskConfirmation()" [disabled]="savingArchive()">Vazgeç</button>
+                    <button type="button" class="is-danger" (click)="confirmArchiveTask()" [disabled]="savingArchive()">{{ savingArchive() ? 'Arşivleniyor…' : 'Arşivle' }}</button>
+                  </footer>
+                </section>
+              </div>
+            }
+
+            @if (archiveListOpen()) {
+              <div class="pd-dialog-layer" (click)="closeArchiveList()">
+                <section class="pd-dialog pd-archive-dialog" role="dialog" aria-modal="true" aria-labelledby="archive-list-title" (click)="$event.stopPropagation()">
+                  <header>
+                    <div>
+                      <h2 id="archive-list-title">Arşivlenen Görevler</h2>
+                      <p>Yanlışlıkla kaldırılan görevleri alt görevleriyle birlikte geri yükleyebilirsiniz.</p>
+                    </div>
+                    <button type="button" aria-label="Arşivi kapat" (click)="closeArchiveList()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+                  <div class="pd-archive-list">
+                    @for (task of archivedTasks(); track task.taskId) {
+                      <article>
+                        <span class="pd-archive-item-icon"><app-icon [name]="task.isAiGenerated ? 'sparkles' : 'tasks'" [size]="17" /></span>
+                        <div>
+                          <strong>{{ task.title }}</strong>
+                          <small>
+                            {{ task.isAiGenerated ? 'AI kaynaklı' : 'Kullanıcı görevi' }}
+                            @if (task.archivedSubtaskCount) { · {{ task.archivedSubtaskCount }} alt görev }
+                            · {{ formatDateTime(task.archivedAtUtc) }}
+                          </small>
+                        </div>
+                        <button type="button" [disabled]="!!restoringTaskId()" (click)="restoreArchivedTask(task)">
+                          <app-icon name="arrow-left" [size]="13" />
+                          {{ restoringTaskId() === task.taskId ? 'Yükleniyor…' : 'Geri yükle' }}
+                        </button>
+                      </article>
+                    } @empty {
+                      <div class="pd-archive-empty">
+                        <app-icon name="check" [size]="22" />
+                        <strong>Arşiv boş</strong>
+                        <span>Arşivlenmiş görev bulunmuyor.</span>
+                      </div>
+                    }
+                  </div>
+                </section>
+              </div>
+            }
+
+            @if (uploadDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeDialogs()">
+                <form class="pd-dialog pd-upload-dialog" role="dialog" aria-modal="true" aria-labelledby="upload-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveUpload()">
+                  <header>
+                    <h2 id="upload-title">Dosya Yükleyin</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+
+                  <div class="pd-dialog-body">
+                    <label class="pd-dialog-field pd-dialog-field--wide"><span>Dosya Adı</span><input type="text" name="uploadFileName" [ngModel]="uploadFileName()" (ngModelChange)="uploadFileName.set($event)" /></label>
+                    <label class="pd-drop-zone" (dragover)="$event.preventDefault()" (drop)="onFilesDropped($event)">
+                      <input type="file" multiple (change)="onFilesSelected($event)" />
+                      <app-icon name="download" [size]="27" />
+                      <span>Dosyaları Seçin Veya Sürükleyip Bırakın</span>
+                    </label>
+
+                    <div class="pd-upload-files">
+                      @for (file of uploadFiles(); track file.id) {
+                        <article>
+                          <span class="pd-upload-file-icon"><app-file-type-icon [kind]="file.kind" [size]="30" [label]="file.name + ' dosya türü'" /></span>
+                          <strong>{{ file.name }}</strong><small>{{ file.size }}</small>
+                          <span class="pd-upload-progress" [style.--upload-progress]="file.progress * 3.6 + 'deg'"><b>%{{ file.progress }}</b></span>
+                          <button type="button" [attr.aria-label]="file.name + ' dosyasını kaldır'" (click)="removeUploadFile(file.id)"><app-icon name="x" [size]="15" /></button>
+                        </article>
+                      }
+                    </div>
+                  </div>
+
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="uploadFiles().length === 0 || savingUpload()">{{ savingUpload() ? 'Yükleniyor…' : 'Yükle' }}</button></footer>
+                </form>
+              </div>
+            }
+
+            @if (mainGroupDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeFeasibilityDialogs()">
+                <form class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="main-group-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveMainGroup()">
+                  <header>
+                    <h2 id="main-group-title">Ana Grup Ekle</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeFeasibilityDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+                  <div class="pd-dialog-body">
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Ana Grup Adı</span>
+                      <input type="text" name="mainGroupName" autofocus [ngModel]="newMainGroupName()" (ngModelChange)="newMainGroupName.set($event)" />
+                    </label>
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Bağlı İş Paketi</span>
+                      <select
+                        name="mainGroupWorkPackage"
+                        [ngModel]="newMainGroupWorkPackageId()"
+                        (ngModelChange)="newMainGroupWorkPackageId.set($event)"
+                      >
+                        <option value="">İş paketi seçiniz</option>
+                        @for (workPackage of timelineWorkPackageOptions(); track workPackage.id) {
+                          <option [value]="workPackage.id">{{ workPackage.label }}</option>
+                        }
+                      </select>
+                    </label>
+                    @if (feasibilityFormError()) { <p class="pd-dialog-error">{{ feasibilityFormError() }}</p> }
+                  </div>
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeFeasibilityDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="savingFeasibility()">{{ savingFeasibility() ? 'Kaydediliyor…' : 'Kaydet' }}</button></footer>
+                </form>
+              </div>
+            }
+
+            @if (itemDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeFeasibilityDialogs()">
+                <form class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="item-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveItem()">
+                  <header>
+                    <h2 id="item-title">Bütçe Kalemi Ekle</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeFeasibilityDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+                  <div class="pd-dialog-body">
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Birim</span>
+                      <input type="text" name="itemUnit" autofocus [ngModel]="itemDraft().unit" (ngModelChange)="updateItemDraft('unit', $event)" />
+                    </label>
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Açıklama</span>
+                      <input type="text" name="itemDescription" [ngModel]="itemDraft().description" (ngModelChange)="updateItemDraft('description', $event)" />
+                    </label>
+                    <div class="pd-dialog-row">
+                      <label class="pd-dialog-field">
+                        <span>Tutar</span>
+                        <input type="number" min="0.01" step="0.01" name="itemAmount" [ngModel]="itemDraft().amount" (ngModelChange)="updateItemDraft('amount', $event)" />
+                      </label>
+                      <label class="pd-dialog-field">
+                        <span>Para Birimi</span>
+                        <select name="itemCurrency" [ngModel]="itemDraft().currency" (ngModelChange)="updateItemDraft('currency', $event)">
+                          <option value="TRY">₺ TRY</option>
+                          <option value="USD">$ USD</option>
+                          <option value="EUR">€ EUR</option>
+                        </select>
+                      </label>
+                    </div>
+                    @if (feasibilityFormError()) { <p class="pd-dialog-error">{{ feasibilityFormError() }}</p> }
+                  </div>
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeFeasibilityDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="savingFeasibility()">{{ savingFeasibility() ? 'Kaydediliyor…' : 'Kaydet' }}</button></footer>
+                </form>
+              </div>
+            }
+
+            @if (submitDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeFeasibilityDialogs()">
+                <form class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="submit-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveSubmit()">
+                  <header>
+                    <h2 id="submit-title">Onaya Gönder</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeFeasibilityDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+                  <div class="pd-dialog-body">
+                    <p class="pd-dialog-hint">Onaylayıcıları sırasıyla ekleyin — onay, girdiğiniz sırayla istenecektir.</p>
+                    @for (name of approverNames(); track $index; let i = $index) {
+                      <div class="pd-dialog-row">
+                        <label class="pd-dialog-field pd-dialog-field--wide">
+                          <span>{{ i + 1 }}. Onaylayıcı</span>
+                          <input type="text" [ngModel]="name" (ngModelChange)="updateApproverName(i, $event)" [name]="'approver' + i" />
+                        </label>
+                        @if (approverNames().length > 1) {
+                          <button type="button" aria-label="Onaylayıcıyı kaldır" (click)="removeApproverField(i)"><app-icon name="x" [size]="15" /></button>
+                        }
+                      </div>
+                    }
+                    <button class="pd-inline-add" type="button" (click)="addApproverField()">Onaylayıcı Ekle <app-icon name="plus" [size]="16" /></button>
+                    @if (feasibilityFormError()) { <p class="pd-dialog-error">{{ feasibilityFormError() }}</p> }
+                  </div>
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeFeasibilityDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="savingFeasibility()">{{ savingFeasibility() ? 'Gönderiliyor…' : 'Gönder' }}</button></footer>
+                </form>
+              </div>
+            }
+
+            @if (decideDialogOpen()) {
+              <div class="pd-dialog-layer" (click)="closeFeasibilityDialogs()">
+                <form class="pd-dialog" role="dialog" aria-modal="true" aria-labelledby="decide-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveDecide()">
+                  <header>
+                    <h2 id="decide-title">{{ decideApprove() ? 'Kalemi Onayla' : 'Kalemi Reddet' }}</h2>
+                    <button type="button" aria-label="Pencereyi kapat" (click)="closeFeasibilityDialogs()"><app-icon name="x" [size]="14" /></button>
+                  </header>
+                  <div class="pd-dialog-body">
+                    <label class="pd-dialog-field pd-dialog-field--wide">
+                      <span>Açıklama (isteğe bağlı)</span>
+                      <textarea rows="3" name="decideComment" [ngModel]="decideComment()" (ngModelChange)="decideComment.set($event)"></textarea>
+                    </label>
+                    @if (feasibilityFormError()) { <p class="pd-dialog-error">{{ feasibilityFormError() }}</p> }
+                  </div>
+                  <footer><button class="pd-dialog-cancel" type="button" (click)="closeFeasibilityDialogs()">Vazgeç</button><button class="pd-dialog-primary" type="submit" [disabled]="savingFeasibility()">{{ decideApprove() ? 'Onayla' : 'Reddet' }}</button></footer>
+                </form>
+              </div>
+            }
+
+          </section>
+
+          <aside id="pd-project-timeline" class="pd-timeline" aria-label="Proje zaman çizelgesi">
+            <button
+              class="pd-panel-toggle pd-panel-toggle--right"
+              type="button"
+              aria-controls="pd-project-timeline"
+              [attr.aria-expanded]="!timelineCollapsed()"
+              [attr.aria-label]="timelineCollapsed() ? 'Zaman çizelgesini genişlet' : 'Zaman çizelgesini daralt'"
+              [attr.title]="timelineCollapsed() ? 'Zaman akışını göster' : 'Zaman akışını gizle'"
+              (click)="toggleTimelinePanel()"
+            >
+              <span class="pd-panel-toggle-icon"><app-icon name="chevron-right" [size]="16" /></span>
+              <span class="pd-panel-toggle-label">{{ timelineCollapsed() ? 'Akışı göster' : 'Akışı gizle' }}</span>
+            </button>
+
+            <div class="pd-timeline-list" [class.pd-timeline-list--compact]="timelineCollapsed()" [attr.aria-hidden]="timelineCollapsed()">
+              <article class="pd-timeline-item pd-timeline-item--start">
+                <span class="pd-timeline-dot"><app-icon name="check" [size]="12" /></span>
+                <div class="pd-timeline-body">
+                  <header><div><strong>Başlangıç Tarihi</strong><time>{{ timelineStartLabel() }}</time></div></header>
+                </div>
+              </article>
+              @if (timelineWarnings().length) {
+                <p class="pd-timeline-warning" role="status">{{ timelineWarnings().join(' ') }}</p>
+              }
+              @for (group of timelineGroups(); track group.id) {
+                <article
+                  class="pd-timeline-item pd-timeline-item--group"
+                  [class.pd-timeline-item--done]="group.state === 'done'"
+                  [class.pd-timeline-item--late]="group.state === 'late'"
+                  [class.pd-timeline-item--active]="group.state === 'active'"
+                  [class.pd-timeline-item--pending]="group.state === 'pending'"
+                >
+                  <span class="pd-timeline-dot">
+                    <app-icon [name]="group.state === 'done' ? 'check' : 'clock'" [size]="11" />
+                  </span>
+                  <div class="pd-timeline-body">
+                    <header>
+                      <div><time>{{ group.date }}</time><strong>{{ group.title }}</strong></div>
+                      <b>{{ group.deviation }}</b>
+                    </header>
+                  </div>
+                </article>
+              }
+              <article class="pd-timeline-item pd-timeline-item--end">
+                <span class="pd-timeline-dot"><app-icon name="clock" [size]="11" /></span>
+                <div class="pd-timeline-body">
+                  <header><div><strong>Bitiş Tarihi</strong><time>{{ project().end }}</time></div>@if (project().deviation) { <b>{{ project().deviation }}</b> }</header>
+                </div>
+              </article>
+            </div>
+          </aside>
+        </div>
+
+      </section>
+    </div>
+  </section>
+</main>

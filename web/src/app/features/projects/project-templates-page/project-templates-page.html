@@ -1,0 +1,273 @@
+<main class="pm-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell" aria-label="Proje Şablonları">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [attr.aria-current]="item.active ? 'page' : null"
+            [title]="item.label"
+            (click)="item.label === 'Projeler' ? goToProjects() : item.label === 'Organizasyon' ? goToDepartments() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Şablonlar' ? goToTemplates() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace">
+      <header class="pm-topbar">
+        <div class="pm-title-wrap">
+          <button type="button" aria-label="Geri dön" title="Geri dön" (click)="goBack()">
+            <app-icon name="arrow-left" [size]="18" />
+          </button>
+          <h1>Şablonlar</h1>
+        </div>
+
+        <div class="pm-top-actions">
+          <button class="pm-top-icon" type="button" aria-label="Yardım"><app-icon name="help" [size]="19" /></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Mesajlar"><app-icon name="mail" [size]="19" /><span>1</span></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler"><app-icon name="bell" [size]="19" /><span>3</span></button>
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="profileOpen.update((value) => !value)">
+              <strong>{{ currentUserName() }}</strong>
+              <span class="pm-avatar" aria-hidden="true">SG</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu">
+                <strong>{{ currentUserName() }}</strong>
+                <span>Proje Yöneticisi</span>
+                <button type="button" (click)="logout()">Oturumu Kapat</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+
+      <section class="pm-module tpl-module">
+        <div class="tpl-page">
+          <section class="tpl-hero" aria-labelledby="template-hero-title">
+            <div class="tpl-hero-copy">
+              <span class="tpl-eyebrow">
+                <app-icon name="sparkles" [size]="15" />
+                Proje kurulumunu hızlandırın
+              </span>
+              <h2 id="template-hero-title">Tekrarlanan işleri standartlaştırın</h2>
+              <p>
+                Ekipleriniz için hazır alanlar ve kurallar tanımlayın; yeni projeleri aynı standartla,
+                daha kısa sürede başlatın.
+              </p>
+            </div>
+            @if (canManageProjects()) {
+              <button class="tpl-primary-action" type="button" (click)="createTemplate()">
+                <span><app-icon name="plus" [size]="18" /></span>
+                Yeni Şablon Oluştur
+              </button>
+            }
+            <div class="tpl-hero-decoration" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+          </section>
+
+          <section class="tpl-summary" aria-label="Şablon özeti">
+            <article class="tpl-summary-card">
+              <span class="tpl-summary-icon tpl-summary-icon--blue"><app-icon name="form" [size]="19" /></span>
+              <div><strong>{{ templates().length }}</strong><span>Toplam şablon</span></div>
+            </article>
+            <article class="tpl-summary-card">
+              <span class="tpl-summary-icon tpl-summary-icon--violet"><app-icon name="layers" [size]="19" /></span>
+              <div><strong>{{ typeCoverageCount() }}<small>/3</small></strong><span>Kapsanan proje türü</span></div>
+            </article>
+            <article class="tpl-summary-card">
+              <span class="tpl-summary-icon tpl-summary-icon--orange"><app-icon name="sliders" [size]="19" /></span>
+              <div><strong>{{ customFieldTotal() }}</strong><span>Tanımlı özel alan</span></div>
+            </article>
+            <article class="tpl-summary-card">
+              <span class="tpl-summary-icon tpl-summary-icon--green"><app-icon name="check" [size]="19" /></span>
+              <div><strong>{{ requiredFieldTotal() }}</strong><span>Zorunlu alan</span></div>
+            </article>
+          </section>
+
+          <section class="tpl-library" aria-labelledby="template-library-title">
+            <header class="tpl-library-heading">
+              <div>
+                <h2 id="template-library-title">Şablon Kütüphanesi</h2>
+                <p>{{ filteredTemplates().length }} şablon gösteriliyor</p>
+              </div>
+              <label class="tpl-search">
+                <span class="sr-only">Şablonlarda ara</span>
+                <app-icon name="search" [size]="17" />
+                <input
+                  type="search"
+                  placeholder="Şablon veya alan ara"
+                  [ngModel]="searchQuery()"
+                  (ngModelChange)="searchQuery.set($event)"
+                />
+                @if (searchQuery()) {
+                  <button type="button" aria-label="Aramayı temizle" (click)="searchQuery.set('')">
+                    <app-icon name="x" [size]="14" />
+                  </button>
+                }
+              </label>
+            </header>
+
+            <nav class="tpl-filters" aria-label="Proje türüne göre filtrele">
+              @for (filter of typeFilters; track filter.value) {
+                <button
+                  type="button"
+                  [class.is-active]="selectedType() === filter.value"
+                  [attr.aria-pressed]="selectedType() === filter.value"
+                  (click)="selectType(filter.value)"
+                >
+                  {{ filter.label }}
+                  @if (filter.value === 'All') {
+                    <span>{{ templates().length }}</span>
+                  }
+                </button>
+              }
+            </nav>
+
+            @if (loading()) {
+              <div class="tpl-grid" aria-label="Şablonlar yükleniyor">
+                @for (item of [1, 2, 3]; track item) {
+                  <article class="tpl-card tpl-card--skeleton">
+                    <span></span><span></span><span></span><span></span>
+                  </article>
+                }
+              </div>
+            } @else if (loadError()) {
+              <div class="tpl-state tpl-state--error">
+                <span><app-icon name="alert" [size]="24" /></span>
+                <h3>Şablonlar yüklenemedi</h3>
+                <p>{{ loadError() }}</p>
+                <button type="button" (click)="retryLoad()">Yeniden Dene</button>
+              </div>
+            } @else {
+              <div class="tpl-grid">
+                @for (template of filteredTemplates(); track template.id) {
+                  <article class="tpl-card" [ngClass]="typeCardClass(template.applicableProjectType)">
+                    <header class="tpl-card-header">
+                      <span class="tpl-card-icon"><app-icon name="form" [size]="20" /></span>
+                      <span class="tpl-badge" [ngClass]="typeBadgeClass(template.applicableProjectType)">
+                        {{ typeLabel(template.applicableProjectType) }}
+                      </span>
+                      @if (canManageProjects()) {
+                        <div class="tpl-card-actions">
+                          <button type="button" aria-label="Şablonu düzenle" title="Düzenle" (click)="editTemplate(template.id)">
+                            <app-icon name="edit" [size]="15" />
+                          </button>
+                          <button class="is-danger" type="button" aria-label="Şablonu sil" title="Sil" (click)="requestDelete(template.id)">
+                            <app-icon name="trash" [size]="15" />
+                          </button>
+                        </div>
+                      }
+                    </header>
+
+                    <div class="tpl-card-copy">
+                      <h3>{{ template.name }}</h3>
+                      <p>{{ typeDescription(template.applicableProjectType) }}</p>
+                    </div>
+
+                    <div class="tpl-field-preview">
+                      <span class="tpl-field-preview-title">Şablon alanları</span>
+                      <ul>
+                        @for (field of previewFields(template); track field.id) {
+                          <li>
+                            <app-icon name="check" [size]="13" />
+                            <span>{{ field.label }}</span>
+                            @if (field.isRequired) { <small>Zorunlu</small> }
+                          </li>
+                        } @empty {
+                          <li class="is-muted">Henüz aktif alan eklenmedi.</li>
+                        }
+                      </ul>
+                      @if (remainingFieldCount(template) > 0) {
+                        <span class="tpl-more-fields">+{{ remainingFieldCount(template) }} alan daha</span>
+                      }
+                    </div>
+
+                    <footer class="tpl-card-footer">
+                      <div class="tpl-card-metrics">
+                        <span><strong>{{ customFieldCount(template) }}</strong> özel alan</span>
+                        <i aria-hidden="true"></i>
+                        <span><strong>{{ requiredFieldCount(template) }}</strong> zorunlu</span>
+                      </div>
+                      <button type="button" (click)="editTemplate(template.id)">
+                        {{ canManageProjects() ? 'Düzenle' : 'İncele' }}
+                        <app-icon name="arrow-right" [size]="15" />
+                      </button>
+                    </footer>
+                  </article>
+                } @empty {
+                  <div class="tpl-state tpl-state--empty">
+                    <span><app-icon [name]="hasActiveFilters() ? 'search' : 'form'" [size]="25" /></span>
+                    <h3>{{ hasActiveFilters() ? 'Eşleşen şablon bulunamadı' : 'Henüz şablon oluşturulmadı' }}</h3>
+                    <p>
+                      {{
+                        hasActiveFilters()
+                          ? 'Arama metnini veya proje türü filtresini değiştirerek tekrar deneyin.'
+                          : 'İlk şablonunuzu oluşturarak proje başlangıçlarını standartlaştırın.'
+                      }}
+                    </p>
+                    @if (hasActiveFilters()) {
+                      <button type="button" (click)="clearFilters()">Filtreleri Temizle</button>
+                    } @else if (canManageProjects()) {
+                      <button type="button" (click)="createTemplate()">İlk Şablonu Oluştur</button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  @if (pendingDeleteTemplate(); as template) {
+    <div class="tpl-confirm-layer" (click)="cancelDelete()">
+      <div class="tpl-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-template-title" (click)="$event.stopPropagation()">
+        <h2 id="delete-template-title">Şablonu sil</h2>
+        <p>
+          <strong>{{ template.name }}</strong> şablonunu silmek istediğinize emin misiniz? Bu şablonla daha önce
+          oluşturulmuş projeler etkilenmez, ancak şablon yeni proje oluşturmada seçilemez hale gelir.
+        </p>
+        <footer>
+          <button type="button" class="tpl-confirm-cancel" (click)="cancelDelete()">Vazgeç</button>
+          <button type="button" class="tpl-confirm-danger" [disabled]="deletingId() === template.id" (click)="confirmDelete()">
+            {{ deletingId() === template.id ? 'Siliniyor…' : 'Sil' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</main>

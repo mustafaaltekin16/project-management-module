@@ -1,0 +1,12 @@
+name: ozveri-0047-frontend
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ozveri-0047-frontend:local
+    ports:
+      - "${FRONTEND_PORT:-4300}:80"
+    restart: unless-stopped
+

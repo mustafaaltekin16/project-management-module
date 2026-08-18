@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- Benign patch-version skew between the pinned EF Core packages and what Npgsql pulls in
+         transitively (both 10.0.x, binary compatible) — see PackageReference Update below. -->
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Npgsql.EntityFrameworkCore.PostgreSQL pulls an older Microsoft.EntityFrameworkCore.Relational
+         transitively than the version referenced directly elsewhere in the solution; pin it explicitly
+         so every project resolves the same assembly version instead of MSB3277 warnings/runtime mismatches. -->
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <!-- MassTransit 9.x requires a paid license at runtime (ConfigurationException on startup without
+         one) — same category of problem this project avoided with Duende IdentityServer. Pinned to the
+         last fully open-source (Apache 2.0) 8.x release directly in
+         BuildingBlocks/Ozdilek.PM.BuildingBlocks.csproj (an Update here would no-op: Directory.Build.props
+         is imported before the csproj's own Include, so there is nothing yet to "update" at that point). -->
+  </ItemGroup>
+</Project>

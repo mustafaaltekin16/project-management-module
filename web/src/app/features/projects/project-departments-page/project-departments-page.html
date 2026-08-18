@@ -1,0 +1,346 @@
+<main class="pm-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell" aria-label="Organizasyon Yönetimi">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Projeler' ? goToProjects() : null"
+          ><app-icon [name]="item.icon" [size]="18" /></button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label" (click)="item.label === 'Şablonlar' ? goToTemplates() : null">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace">
+      <header class="pm-topbar">
+        <div class="pm-title-wrap">
+          <button type="button" aria-label="Projelere dön" title="Projelere dön" (click)="goToProjects()">
+            <app-icon name="arrow-left" [size]="18" />
+          </button>
+          <div class="org-page-title">
+            <h1>Organizasyon Yönetimi</h1>
+            <span>Çalışanlar, departmanlar ve erişim düzeni</span>
+          </div>
+        </div>
+        <div class="pm-top-actions">
+          <button class="pm-top-icon" type="button" aria-label="Yardım"><app-icon name="help" [size]="19" /></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler"><app-icon name="bell" [size]="19" /><span>3</span></button>
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="profileOpen.update((value) => !value)">
+              <strong>{{ currentUserName() }}</strong><span class="pm-avatar" aria-hidden="true">{{ initials(currentUserName()) }}</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu">
+                <strong>{{ currentUserName() }}</strong>
+                <span>{{ isAdmin() ? 'Admin' : 'Proje Yöneticisi' }}</span>
+                <button type="button" (click)="logout()">Oturumu Kapat</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+
+      <section class="org-module">
+        <header class="org-commandbar">
+          <nav class="org-tabs" aria-label="Organizasyon bölümleri">
+            <button type="button" [class.is-active]="activeTab() === 'overview'" (click)="selectTab('overview')">
+              <app-icon name="dashboard" [size]="16" /> Genel Bakış
+            </button>
+            <button type="button" [class.is-active]="activeTab() === 'employees'" (click)="selectTab('employees')">
+              <app-icon name="users" [size]="16" /> Çalışanlar
+              <span>{{ activeEmployees().length }}</span>
+            </button>
+            <button type="button" [class.is-active]="activeTab() === 'departments'" (click)="selectTab('departments')">
+              <app-icon name="building" [size]="16" /> Departmanlar
+              <span>{{ activeDepartments().length }}</span>
+            </button>
+          </nav>
+          <div class="org-command-actions">
+            <button class="org-secondary-action" type="button" (click)="openCreateDepartment()">
+              <app-icon name="building" [size]="16" /> Yeni Departman
+            </button>
+            <button class="org-primary-action" type="button" (click)="openCreateEmployee()">
+              <app-icon name="plus" [size]="16" /> Yeni Çalışan
+            </button>
+          </div>
+        </header>
+
+        @if (loading()) {
+          <div class="org-state"><span class="org-loader"></span><h2>Organizasyon yükleniyor</h2><p>Çalışan ve departman kayıtları hazırlanıyor…</p></div>
+        } @else if (loadError()) {
+          <div class="org-state org-state--error"><app-icon name="alert" [size]="28" /><h2>Bilgiler yüklenemedi</h2><p>{{ loadError() }}</p><button type="button" (click)="retryLoad()">Yeniden Dene</button></div>
+        } @else {
+          <div class="org-content">
+            @if (activeTab() === 'overview') {
+              <section class="org-overview">
+                <header class="org-overview-heading">
+                  <div class="org-overview-title">
+                    <span><app-icon name="building" [size]="20" /></span>
+                    <div>
+                      <h2>Organizasyon Özeti</h2>
+                      <p>Proje oluşturma ve görev atamalarında kullanılan kurumsal çalışan dizini</p>
+                    </div>
+                  </div>
+                  <div class="org-overview-actions">
+                    <button type="button" (click)="openCreateEmployee()"><app-icon name="plus" [size]="16" /> Çalışan Ekle</button>
+                    <button type="button" (click)="openCreateDepartment()"><app-icon name="building" [size]="16" /> Departman Ekle</button>
+                  </div>
+                </header>
+
+                <div class="org-metrics">
+                  <article><span><app-icon name="users" [size]="18" /></span><div><small>Aktif çalışan</small><strong>{{ activeEmployees().length }}</strong></div></article>
+                  <article><span><app-icon name="building" [size]="18" /></span><div><small>Aktif departman</small><strong>{{ activeDepartments().length }}</strong></div></article>
+                  <article><span><app-icon name="user" [size]="18" /></span><div><small>Proje yöneticisi</small><strong>{{ projectManagerCount() }}</strong></div></article>
+                  <article [class.has-warning]="employeesWithoutDepartment().length + departmentsWithoutHead().length > 0"><span><app-icon name="alert" [size]="18" /></span><div><small>Bekleyen düzenleme</small><strong>{{ employeesWithoutDepartment().length + departmentsWithoutHead().length }}</strong></div></article>
+                </div>
+
+                <div class="org-overview-grid">
+                  <section class="org-attention">
+                    <header><div><h3>Düzenleme Gerekenler</h3><p>Proje seçimlerinde sorun oluşturabilecek kayıtlar</p></div><span>{{ employeesWithoutDepartment().length + departmentsWithoutHead().length }}</span></header>
+                    <button type="button" (click)="showUnassignedEmployees()">
+                      <span class="org-attention-icon is-orange"><app-icon name="user" [size]="17" /></span>
+                      <div><strong>Departmanı olmayan çalışanlar</strong><small>Bu çalışanlar birim bazlı seçimlerde sınırlı görünür.</small></div>
+                      <b>{{ employeesWithoutDepartment().length }}</b><app-icon name="chevron-right" [size]="16" />
+                    </button>
+                    <button type="button" (click)="showDepartmentsWithoutHead()">
+                      <span class="org-attention-icon is-blue"><app-icon name="building" [size]="17" /></span>
+                      <div><strong>Sorumlusu olmayan departmanlar</strong><small>İş paketi yöneticisi otomatik atanamaz.</small></div>
+                      <b>{{ departmentsWithoutHead().length }}</b><app-icon name="chevron-right" [size]="16" />
+                    </button>
+                    @if (inactiveEmployeeCount() > 0) {
+                      <button type="button" (click)="employeeStatusFilter.set('inactive'); selectTab('employees')">
+                        <span class="org-attention-icon is-muted"><app-icon name="user" [size]="17" /></span>
+                        <div><strong>Pasif çalışan hesapları</strong><small>Geçmiş projelerde korunur, yeni seçimlerde gösterilmez.</small></div>
+                        <b>{{ inactiveEmployeeCount() }}</b><app-icon name="chevron-right" [size]="16" />
+                      </button>
+                    }
+                  </section>
+
+                  <section class="org-role-guide">
+                    <header><h3>Rol ve Yetki Düzeni</h3><span>{{ isAdmin() ? 'Admin' : 'Proje yöneticisi' }}</span></header>
+                    <div class="org-role-item"><span class="role-admin"><app-icon name="sliders" [size]="16" /></span><div><strong>Admin</strong><small>Hesap, rol, durum ve departman kayıtlarının tamamını yönetir.</small></div></div>
+                    <div class="org-role-item"><span class="role-manager"><app-icon name="projects" [size]="16" /></span><div><strong>Proje Yöneticisi</strong><small>Çalışan ve departmanların operasyonel düzenini yönetir.</small></div></div>
+                    <div class="org-role-item"><span class="role-member"><app-icon name="user" [size]="16" /></span><div><strong>Çalışan</strong><small>Projelerde, görevlerde ve ilgili ekip seçimlerinde yer alır.</small></div></div>
+                    <p><app-icon name="help" [size]="14" /> Unvan organizasyon bilgisidir; uygulama yetkisini roller belirler.</p>
+                  </section>
+                </div>
+              </section>
+            }
+
+            @if (activeTab() === 'employees') {
+              <section class="org-list-page" aria-labelledby="employees-title">
+                <header class="org-section-heading">
+                  <div><h2 id="employees-title">Çalışanlar</h2><p>{{ filteredEmployees().length }} kayıt gösteriliyor</p></div>
+                  <label class="org-search"><app-icon name="search" [size]="16" /><input type="search" placeholder="Ad, e-posta, unvan veya rol ara" [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)" /></label>
+                </header>
+                <div class="org-filters">
+                  <label><span>Durum</span><select [ngModel]="employeeStatusFilter()" (ngModelChange)="employeeStatusFilter.set($event)"><option value="all">Tümü</option><option value="active">Aktif</option><option value="inactive">Pasif</option></select></label>
+                  <label><span>Departman</span><select [ngModel]="employeeDepartmentFilter()" (ngModelChange)="employeeDepartmentFilter.set($event)"><option value="">Tüm departmanlar</option><option value="unassigned">Departmanı olmayanlar</option>@for (department of activeDepartments(); track department.id) { <option [value]="department.id">{{ department.name }}</option> }</select></label>
+                  @if (employeeSearch() || employeeDepartmentFilter() || employeeStatusFilter() !== 'all') {
+                    <button type="button" (click)="employeeSearch.set(''); employeeDepartmentFilter.set(''); employeeStatusFilter.set('all')"><app-icon name="x" [size]="14" /> Filtreleri temizle</button>
+                  }
+                </div>
+
+                <div class="org-table-wrap">
+                  <table class="org-table">
+                    <thead><tr><th>Çalışan</th><th>Departman</th><th>Unvan</th><th>Roller</th><th>Durum</th><th aria-label="İşlemler"></th></tr></thead>
+                    <tbody>
+                      @for (employee of filteredEmployees(); track employee.id) {
+                        <tr [class.is-inactive]="employee.isActive === false">
+                          <td><div class="org-person"><span>{{ initials(employee.displayName) }}</span><div><strong>{{ employee.displayName }}</strong><small>{{ employee.email }}</small></div></div></td>
+                          <td><span [class.org-unassigned]="!employee.departmentName">{{ employee.departmentName || 'Departman yok' }}</span></td>
+                          <td>{{ employee.title || '—' }}</td>
+                          <td><div class="org-role-badges">@for (role of employee.roles; track role) { <span [class]="'role-' + role.toLocaleLowerCase()">{{ roleLabel(role) }}</span> }</div></td>
+                          <td><span class="org-status" [class.is-passive]="employee.isActive === false"><i></i>{{ employee.isActive === false ? 'Pasif' : 'Aktif' }}</span></td>
+                          <td><div class="org-row-actions">
+                            <button type="button" title="Düzenle" [disabled]="!canEditEmployee(employee)" (click)="openEditEmployee(employee)"><app-icon name="edit" [size]="15" /></button>
+                            @if (isAdmin()) {
+                              <button type="button" title="Şifreyi sıfırla" (click)="openPasswordDialog(employee)"><app-icon name="sliders" [size]="15" /></button>
+                              @if (!employee.roles.includes('Admin')) {
+                                <button type="button" [title]="employee.isActive === false ? 'Aktifleştir' : 'Pasife al'" (click)="setEmployeeStatus(employee)"><app-icon [name]="employee.isActive === false ? 'check' : 'x'" [size]="15" /></button>
+                                @if (employee.isActive === false) {
+                                  <button class="is-danger" type="button" title="Kalıcı olarak sil" (click)="openEmployeeDelete(employee)"><app-icon name="trash" [size]="15" /></button>
+                                }
+                              }
+                            }
+                          </div></td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="6"><div class="org-empty"><app-icon name="search" [size]="23" /><strong>Eşleşen çalışan bulunamadı</strong><span>Filtreleri değiştirerek tekrar deneyin.</span></div></td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            }
+
+            @if (activeTab() === 'departments') {
+              <section class="org-departments-page" aria-labelledby="departments-title">
+                <header class="org-section-heading">
+                  <div><h2 id="departments-title">Departmanlar</h2><p>Birim sorumlularını ve ekip üyelerini yönetin</p></div>
+                  <label class="org-search"><app-icon name="search" [size]="16" /><input type="search" placeholder="Departman veya sorumlu ara" [ngModel]="departmentSearch()" (ngModelChange)="departmentSearch.set($event)" /></label>
+                </header>
+                <div class="org-filters">
+                  <label><span>Durum</span><select [ngModel]="departmentStatusFilter()" (ngModelChange)="departmentStatusFilter.set($event)"><option value="all">Tümü</option><option value="active">Aktif</option><option value="inactive">Arşivlenmiş</option></select></label>
+                </div>
+
+                <div class="org-department-layout">
+                  <section class="org-department-list">
+                    @for (department of filteredDepartments(); track department.id) {
+                      <article class="org-department-card" [class.is-selected]="selectedDepartmentId() === department.id" [class.is-inactive]="department.isActive === false">
+                        <button class="org-department-select" type="button" (click)="selectDepartment(department.id)">
+                          <span class="org-department-icon"><app-icon name="building" [size]="18" /></span>
+                          <div><strong>{{ department.name }}</strong><small>{{ department.headDisplayName || 'Sorumlu atanmadı' }}</small></div>
+                          <span class="org-member-count">{{ department.memberCount }} kişi</span>
+                        </button>
+                        <div class="org-department-actions">
+                          <button type="button" title="Düzenle" (click)="openEditDepartment(department)"><app-icon name="edit" [size]="14" /></button>
+                          @if (isAdmin()) {
+                            <button type="button" [title]="department.isActive === false ? 'Aktifleştir' : 'Arşivle'" (click)="setDepartmentStatus(department)"><app-icon [name]="department.isActive === false ? 'check' : 'layers'" [size]="14" /></button>
+                            @if (department.isActive === false) {
+                              <button class="is-danger" type="button" title="Kalıcı olarak sil" (click)="openDepartmentDelete(department)"><app-icon name="trash" [size]="14" /></button>
+                            }
+                          }
+                        </div>
+                      </article>
+                    } @empty {
+                      <div class="org-empty"><app-icon name="building" [size]="23" /><strong>Departman bulunamadı</strong></div>
+                    }
+                  </section>
+
+                  <section class="org-department-detail">
+                    @if (!selectedDepartmentId()) {
+                      <div class="org-empty org-empty--large"><span><app-icon name="building" [size]="27" /></span><strong>Bir departman seçin</strong><p>Sorumlu ve çalışan atamalarını buradan yönetebilirsiniz.</p></div>
+                    } @else if (detailLoading()) {
+                      <div class="org-empty org-empty--large"><span class="org-loader"></span><strong>Departman yükleniyor</strong></div>
+                    } @else if (selectedDepartmentDetail(); as detail) {
+                      <header class="org-detail-heading">
+                        <div><span class="org-department-icon"><app-icon name="building" [size]="20" /></span><div><h3>{{ detail.name }}</h3><p>{{ detail.members.length }} aktif çalışan</p></div></div>
+                        <button type="button" (click)="openEditDepartment({ id: detail.id, name: detail.name, headEmployeeId: detail.headEmployeeId, headDisplayName: detail.headDisplayName, memberCount: detail.members.length, isActive: detail.isActive })"><app-icon name="edit" [size]="15" /> Departmanı Düzenle</button>
+                      </header>
+                      <label class="org-head-picker"><span>Departman sorumlusu</span><select [ngModel]="detail.headEmployeeId ?? ''" (ngModelChange)="changeHead(detail.id, $event)" [disabled]="savingHead() || detail.isActive === false"><option value="">Sorumlu seçilmedi</option>@for (employee of selectableEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }} · {{ employee.departmentName || 'Departmansız' }}</option> }</select></label>
+                      <div class="org-members">
+                        <div class="org-members-heading"><h4>Ekip Üyeleri</h4><span>{{ detail.members.length }}</span></div>
+                        @for (member of detail.members; track member.id) {
+                          <article><div class="org-person"><span>{{ initials(member.displayName) }}</span><div><strong>{{ member.displayName }}</strong><small>{{ member.title || member.email }}</small></div></div>@if (member.id === detail.headEmployeeId) { <em>Sorumlu</em> }<button type="button" [disabled]="savingMember() || member.id === detail.headEmployeeId" (click)="removeMember(member.id)">Çıkar</button></article>
+                        } @empty {
+                          <div class="org-empty"><app-icon name="users" [size]="21" /><strong>Bu departmanda çalışan yok</strong></div>
+                        }
+                        @if (detail.isActive !== false) {
+                          <div class="org-add-member"><select [ngModel]="assignMemberEmployeeId()" (ngModelChange)="assignMemberEmployeeId.set($event)"><option value="">Çalışan seçin…</option>@for (employee of selectableEmployees(); track employee.id) { @if (employee.departmentId !== detail.id) { <option [value]="employee.id">{{ employee.displayName }} @if (employee.departmentName) { · {{ employee.departmentName }} }</option> } }</select><button type="button" [disabled]="!assignMemberEmployeeId() || savingMember()" (click)="addMemberToSelectedDepartment()"><app-icon name="plus" [size]="15" /> Departmana Ekle</button></div>
+                        }
+                      </div>
+                    }
+                  </section>
+                </div>
+              </section>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  </section>
+
+  @if (employeeDialogOpen()) {
+    <div class="org-dialog-layer" (click)="closeEmployeeDialog()">
+      <form class="org-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-dialog-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveEmployee()">
+        <header><div><span><app-icon name="user" [size]="19" /></span><div><h2 id="employee-dialog-title">{{ editingEmployeeId() ? 'Çalışanı Düzenle' : 'Yeni Çalışan' }}</h2><p>{{ editingEmployeeId() ? 'Organizasyon ve erişim bilgilerini güncelleyin.' : 'Yeni çalışan hesabını organizasyona ekleyin.' }}</p></div></div><button type="button" aria-label="Kapat" (click)="closeEmployeeDialog()"><app-icon name="x" [size]="15" /></button></header>
+        <div class="org-dialog-body">
+          <div class="org-form-grid">
+            <label><span>Ad Soyad *</span><input type="text" name="employeeDisplayName" autofocus [ngModel]="employeeDraft().displayName" (ngModelChange)="updateEmployeeDraft('displayName', $event)" /></label>
+            <label><span>E-posta *</span><input type="email" name="employeeEmail" [ngModel]="employeeDraft().email" (ngModelChange)="updateEmployeeDraft('email', $event)" /></label>
+            @if (!editingEmployeeId()) {
+              <label><span>Başlangıç Şifresi *</span><input type="password" name="employeePassword" [ngModel]="employeeDraft().password" (ngModelChange)="updateEmployeeDraft('password', $event)" /></label>
+            }
+            <label><span>Unvan</span><input type="text" name="employeeTitle" [ngModel]="employeeDraft().title" (ngModelChange)="updateEmployeeDraft('title', $event)" placeholder="Örn. Kıdemli Uzman" /></label>
+            <label class="is-wide"><span>Departman</span><select name="employeeDepartmentId" [disabled]="employeeDraft().roles.has('Admin')" [ngModel]="employeeDraft().departmentId" (ngModelChange)="updateEmployeeDraft('departmentId', $event)"><option value="">Departman yok</option>@for (department of activeDepartments(); track department.id) { <option [value]="department.id">{{ department.name }}</option> }</select>@if (employeeDraft().roles.has('Admin')) { <small>Sistem Admin hesabı organizasyon departmanlarına bağlanmaz.</small> }</label>
+          </div>
+          <fieldset class="org-role-fieldset"><legend>Uygulama Rolleri</legend><p>Unvan organizasyon bilgisidir; erişim yetkisini aşağıdaki roller belirler.</p><div>@for (role of availableRoles(); track role) { <label><input type="checkbox" [checked]="employeeDraft().roles.has(role)" (change)="toggleEmployeeRole(role)" /><span><strong>{{ roleLabel(role) }}</strong><small>{{ role === 'Approver' ? 'Onay adımlarında görev alabilir.' : role === 'Member' ? 'Proje ekiplerinde seçilebilir.' : role === 'ProjectManager' ? 'Proje ve organizasyon yönetebilir.' : 'Tüm yönetim yetkilerine sahiptir.' }}</small></span></label> }</div></fieldset>
+          @if (employeeFormError()) { <p class="org-form-error"><app-icon name="alert" [size]="14" /> {{ employeeFormError() }}</p> }
+        </div>
+        <footer><button type="button" class="org-dialog-cancel" (click)="closeEmployeeDialog()">Vazgeç</button><button type="submit" class="org-dialog-save" [disabled]="savingEmployee()">{{ savingEmployee() ? 'Kaydediliyor…' : editingEmployeeId() ? 'Değişiklikleri Kaydet' : 'Çalışanı Oluştur' }}</button></footer>
+      </form>
+    </div>
+  }
+
+  @if (departmentDialogOpen()) {
+    <div class="org-dialog-layer" (click)="closeDepartmentDialog()">
+      <form class="org-dialog org-dialog--compact" role="dialog" aria-modal="true" aria-labelledby="department-dialog-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); saveDepartment()">
+        <header><div><span><app-icon name="building" [size]="19" /></span><div><h2 id="department-dialog-title">{{ editingDepartmentId() ? 'Departmanı Düzenle' : 'Yeni Departman' }}</h2><p>Departman adını ve sorumlusunu belirleyin.</p></div></div><button type="button" aria-label="Kapat" (click)="closeDepartmentDialog()"><app-icon name="x" [size]="15" /></button></header>
+        <div class="org-dialog-body"><div class="org-form-grid"><label class="is-wide"><span>Departman Adı *</span><input type="text" name="departmentName" autofocus [ngModel]="departmentNameDraft()" (ngModelChange)="departmentNameDraft.set($event)" /></label><label class="is-wide"><span>Departman Sorumlusu</span><select name="departmentHead" [ngModel]="departmentHeadDraft()" (ngModelChange)="departmentHeadDraft.set($event)"><option value="">Sorumlu yok</option>@for (employee of selectableEmployees(); track employee.id) { <option [value]="employee.id">{{ employee.displayName }} · {{ employee.departmentName || 'Departmansız' }}</option> }</select></label></div>@if (departmentFormError()) { <p class="org-form-error"><app-icon name="alert" [size]="14" /> {{ departmentFormError() }}</p> }</div>
+        <footer><button type="button" class="org-dialog-cancel" (click)="closeDepartmentDialog()">Vazgeç</button><button type="submit" class="org-dialog-save" [disabled]="savingDepartment()">{{ savingDepartment() ? 'Kaydediliyor…' : 'Kaydet' }}</button></footer>
+      </form>
+    </div>
+  }
+
+  @if (passwordDialogEmployee(); as employee) {
+    <div class="org-dialog-layer" (click)="closePasswordDialog()">
+      <form class="org-dialog org-dialog--compact" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); savePassword()">
+        <header><div><span><app-icon name="sliders" [size]="19" /></span><div><h2 id="password-dialog-title">Şifreyi Sıfırla</h2><p>{{ employee.displayName }} için yeni bir giriş şifresi belirleyin.</p></div></div><button type="button" aria-label="Kapat" (click)="closePasswordDialog()"><app-icon name="x" [size]="15" /></button></header>
+        <div class="org-dialog-body"><div class="org-form-grid"><label class="is-wide"><span>Yeni Şifre *</span><input type="password" name="newPassword" autofocus [ngModel]="passwordDraft()" (ngModelChange)="passwordDraft.set($event)" /><small>En az 4 karakter olmalıdır.</small></label></div></div>
+        <footer><button type="button" class="org-dialog-cancel" (click)="closePasswordDialog()">Vazgeç</button><button type="submit" class="org-dialog-save" [disabled]="passwordDraft().length < 4 || savingPassword()">{{ savingPassword() ? 'Güncelleniyor…' : 'Şifreyi Güncelle' }}</button></footer>
+      </form>
+    </div>
+  }
+
+  @if (deleteCandidate(); as candidate) {
+    <div class="org-dialog-layer" (click)="closeDeleteDialog()">
+      <form class="org-dialog org-dialog--compact org-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title" (click)="$event.stopPropagation()" (submit)="$event.preventDefault(); confirmPermanentDelete()">
+        <header>
+          <div>
+            <span class="is-danger"><app-icon name="trash" [size]="19" /></span>
+            <div>
+              <h2 id="delete-dialog-title">Kalıcı Olarak Sil</h2>
+              <p>{{ candidate.name }} kaydını geri alınamayacak şekilde silmek üzeresiniz.</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Kapat" [disabled]="deletingRecord()" (click)="closeDeleteDialog()"><app-icon name="x" [size]="15" /></button>
+        </header>
+        <div class="org-dialog-body">
+          <div class="org-delete-warning">
+            <app-icon name="alert" [size]="18" />
+            <p>
+              @if (candidate.kind === 'employee') {
+                Geçmiş proje ve görevlerdeki isim görüntüsü korunur; çalışan tekrar giriş yapamaz.
+              } @else {
+                Geçmiş projelerdeki departman adı korunur; bu departman yeni kayıtlarda kullanılamaz.
+              }
+            </p>
+          </div>
+          <label class="org-delete-confirm">
+            <span>Onaylamak için <strong>SİL</strong> yazın</span>
+            <input type="text" name="deleteConfirmation" autocomplete="off" autofocus [ngModel]="deleteConfirmation()" (ngModelChange)="deleteConfirmation.set($event)" />
+          </label>
+          @if (deleteError()) { <p class="org-form-error"><app-icon name="alert" [size]="14" /> {{ deleteError() }}</p> }
+        </div>
+        <footer>
+          <button type="button" class="org-dialog-cancel" [disabled]="deletingRecord()" (click)="closeDeleteDialog()">Vazgeç</button>
+          <button type="submit" class="org-dialog-delete" [disabled]="deleteConfirmation().trim().toLocaleUpperCase('tr-TR') !== 'SİL' || deletingRecord()">
+            {{ deletingRecord() ? 'Siliniyor…' : 'Kalıcı Olarak Sil' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  }
+</main>

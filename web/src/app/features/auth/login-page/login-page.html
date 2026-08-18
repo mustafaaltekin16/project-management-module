@@ -1,0 +1,94 @@
+<main class="login-canvas">
+  <section class="login-brand" aria-label="CWA Projeler Modülü">
+    <img
+      class="login-brand-visual"
+      src="/assets/login-project-visual.jpg"
+      alt=""
+      aria-hidden="true"
+    />
+    <div class="login-brand-shade" aria-hidden="true"></div>
+
+    <header class="login-brand-top">
+      <span class="login-logo"><app-icon name="projects" [size]="22" /></span>
+      <div>
+        <strong>CWA</strong>
+        <small>Projeler Modülü</small>
+      </div>
+    </header>
+
+    <div class="login-brand-message">
+      <h2>Projelerinizi tek bir akışta yönetin.</h2>
+      <p>Planlama, ekip ve ilerleme aynı çalışma alanında.</p>
+    </div>
+
+    <div class="login-brand-focus" aria-hidden="true">
+      <span></span>
+      <i></i>
+      <i></i>
+    </div>
+  </section>
+
+  <section class="login-auth">
+    <form class="login-card" (submit)="$event.preventDefault(); submit()">
+      <header class="login-heading">
+        <span class="login-heading-icon"><app-icon name="user" [size]="20" /></span>
+        <h1>Giriş yapın</h1>
+      </header>
+
+      <label class="login-field">
+        <span>E-posta veya kullanıcı adı</span>
+        <div>
+          <app-icon name="user" [size]="17" />
+          <input
+            type="text"
+            name="email"
+            autocomplete="username"
+            autofocus
+            placeholder="Hesap bilginizi girin"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+          />
+        </div>
+      </label>
+
+      <label class="login-field">
+        <span>Şifre</span>
+        <div>
+          <app-icon name="hash" [size]="17" />
+          <input
+            [type]="passwordVisible() ? 'text' : 'password'"
+            name="password"
+            autocomplete="current-password"
+            placeholder="Şifrenizi girin"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+          />
+          <button
+            class="login-password-toggle"
+            type="button"
+            [attr.aria-label]="passwordVisible() ? 'Şifreyi gizle' : 'Şifreyi göster'"
+            (click)="passwordVisible.update((value) => !value)"
+          >
+            <app-icon name="eye" [size]="17" />
+          </button>
+        </div>
+      </label>
+
+      @if (errorMessage()) {
+        <p class="login-error" role="alert"><app-icon name="alert" [size]="16" />{{ errorMessage() }}</p>
+      }
+
+      <button class="login-submit" type="submit" [disabled]="submitting()">
+        <span>{{ submitting() ? 'Giriş yapılıyor…' : 'Giriş Yap' }}</span>
+        @if (!submitting()) { <app-icon name="arrow-right" [size]="17" /> }
+      </button>
+
+      <p class="login-assistance">
+        <app-icon name="help" [size]="15" />
+        <span>Erişim sorunu için sistem yöneticinize başvurun.</span>
+      </p>
+    </form>
+
+    <footer class="login-auth-footer">© 2026 CWA</footer>
+  </section>
+</main>

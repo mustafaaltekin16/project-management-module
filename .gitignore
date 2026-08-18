@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.angular/
+.claude/
+.codex-timeline-profile/
+.codex-runtime/
+
+# .NET build output (every service/test project)
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+*.user
+
+# Local secrets for docker-compose (API keys etc.) — never commit these.
+.env
+*.env
+
+# Scratch reports/screenshots generated for internal review, not part of the product
+tmp/

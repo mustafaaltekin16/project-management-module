@@ -1,0 +1,51 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/Ozdilek.PM.BuildingBlocks/Ozdilek.PM.BuildingBlocks.csproj" />
+    <Project Path="src/BuildingBlocks/Ozdilek.PM.SharedKernel/Ozdilek.PM.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Contracts/">
+    <Project Path="src/Contracts/Ozdilek.PM.Contracts/Ozdilek.PM.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Gateway/">
+    <Project Path="src/Gateway/Ozdilek.PM.ApiGateway/Ozdilek.PM.ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/AIGatewayService/">
+    <Project Path="src/Services/AIGatewayService/Ozdilek.PM.AIGatewayService.Api/Ozdilek.PM.AIGatewayService.Api.csproj" />
+    <Project Path="src/Services/AIGatewayService/Ozdilek.PM.AIGatewayService.Application/Ozdilek.PM.AIGatewayService.Application.csproj" />
+    <Project Path="src/Services/AIGatewayService/Ozdilek.PM.AIGatewayService.Domain/Ozdilek.PM.AIGatewayService.Domain.csproj" />
+    <Project Path="src/Services/AIGatewayService/Ozdilek.PM.AIGatewayService.Infrastructure/Ozdilek.PM.AIGatewayService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/FeasibilityService/">
+    <Project Path="src/Services/FeasibilityService/Ozdilek.PM.FeasibilityService.Api/Ozdilek.PM.FeasibilityService.Api.csproj" />
+    <Project Path="src/Services/FeasibilityService/Ozdilek.PM.FeasibilityService.Application/Ozdilek.PM.FeasibilityService.Application.csproj" />
+    <Project Path="src/Services/FeasibilityService/Ozdilek.PM.FeasibilityService.Domain/Ozdilek.PM.FeasibilityService.Domain.csproj" />
+    <Project Path="src/Services/FeasibilityService/Ozdilek.PM.FeasibilityService.Infrastructure/Ozdilek.PM.FeasibilityService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/ProjectService/">
+    <Project Path="src/Services/ProjectService/Ozdilek.PM.ProjectService.Api/Ozdilek.PM.ProjectService.Api.csproj" />
+    <Project Path="src/Services/ProjectService/Ozdilek.PM.ProjectService.Application/Ozdilek.PM.ProjectService.Application.csproj" />
+    <Project Path="src/Services/ProjectService/Ozdilek.PM.ProjectService.Domain/Ozdilek.PM.ProjectService.Domain.csproj" />
+    <Project Path="src/Services/ProjectService/Ozdilek.PM.ProjectService.Infrastructure/Ozdilek.PM.ProjectService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/TaskService/">
+    <Project Path="src/Services/TaskService/Ozdilek.PM.TaskService.Api/Ozdilek.PM.TaskService.Api.csproj" />
+    <Project Path="src/Services/TaskService/Ozdilek.PM.TaskService.Application/Ozdilek.PM.TaskService.Application.csproj" />
+    <Project Path="src/Services/TaskService/Ozdilek.PM.TaskService.Domain/Ozdilek.PM.TaskService.Domain.csproj" />
+    <Project Path="src/Services/TaskService/Ozdilek.PM.TaskService.Infrastructure/Ozdilek.PM.TaskService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/UserDirectoryService/">
+    <Project Path="src/Services/UserDirectoryService/Ozdilek.PM.UserDirectoryService.Api/Ozdilek.PM.UserDirectoryService.Api.csproj" />
+    <Project Path="src/Services/UserDirectoryService/Ozdilek.PM.UserDirectoryService.Application/Ozdilek.PM.UserDirectoryService.Application.csproj" />
+    <Project Path="src/Services/UserDirectoryService/Ozdilek.PM.UserDirectoryService.Domain/Ozdilek.PM.UserDirectoryService.Domain.csproj" />
+    <Project Path="src/Services/UserDirectoryService/Ozdilek.PM.UserDirectoryService.Infrastructure/Ozdilek.PM.UserDirectoryService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ozdilek.PM.AIGatewayService.Tests/Ozdilek.PM.AIGatewayService.Tests.csproj" />
+    <Project Path="tests/Ozdilek.PM.FeasibilityService.Tests/Ozdilek.PM.FeasibilityService.Tests.csproj" />
+    <Project Path="tests/Ozdilek.PM.ProjectService.Tests/Ozdilek.PM.ProjectService.Tests.csproj" />
+    <Project Path="tests/Ozdilek.PM.TaskService.Tests/Ozdilek.PM.TaskService.Tests.csproj" />
+    <Project Path="tests/Ozdilek.PM.UserDirectoryService.Tests/Ozdilek.PM.UserDirectoryService.Tests.csproj" />
+  </Folder>
+</Solution>

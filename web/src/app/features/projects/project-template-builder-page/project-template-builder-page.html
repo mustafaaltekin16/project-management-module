@@ -1,0 +1,634 @@
+<main class="pm-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell tb-shell" aria-label="Proje şablonu tasarımcısı" (click)="closeFieldMenu()">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Organizasyon' ? goToDepartments() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Şablonlar' ? goToTemplates() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace tb-workspace">
+      <header class="pm-topbar tb-topbar">
+        <div class="pm-title-wrap">
+          <h1>{{ previewMode() ? '"' + (templateName() || 'Adsız Şablon') + '" Ön İzleme' : pageTitle() }}</h1>
+          @if (statusMessage()) { <span class="tb-top-status" role="status">{{ statusMessage() }}</span> }
+          <button class="pm-icon-plain" type="button" aria-label="Şablon bağlantısını paylaş" title="Paylaş" (click)="shareTemplate()">
+            <app-icon [name]="previewMode() ? 'eye' : 'share'" [size]="19" />
+          </button>
+        </div>
+        <div class="pm-top-actions">
+          <button class="pm-top-icon" type="button" aria-label="Ara"><app-icon name="search" [size]="20" /></button>
+          <button class="pm-top-icon" type="button" aria-label="Yardım"><app-icon name="help" [size]="19" /></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Mesajlar"><app-icon name="mail" [size]="19" /><span>1</span></button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler"><app-icon name="bell" [size]="19" /><span>3</span></button>
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="profileOpen.update((value) => !value)">
+              <strong>{{ currentUserName() }}</strong><span class="pm-avatar" aria-hidden="true">AG</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu">
+                <strong>{{ currentUserName() }}</strong>
+                <span>Proje Yöneticisi</span>
+                <button type="button" (click)="logout()">Oturumu Kapat</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+
+      @if (loading()) {
+        <div class="tb-loading" role="status">Şablon yükleniyor…</div>
+      } @else if (!previewMode()) {
+        <div class="tb-builder">
+          <aside class="tb-toolbox" aria-label="Form elemanları">
+            <h2>Form Elemanları</h2>
+            @for (group of toolGroups; track group.label) {
+              <section>
+                <h3>{{ group.label }}</h3>
+                @for (tool of group.items; track tool.id) {
+                  <button
+                    type="button"
+                    [attr.data-tool-id]="tool.id"
+                    [class.is-selected]="selectedTool() === tool.id"
+                    (click)="addTool(tool)"
+                  >
+                    <app-icon [name]="tool.icon" [size]="14" />
+                    <strong>{{ tool.label }}</strong>
+                    <app-icon class="tb-tool-plus" name="plus" [size]="15" />
+                  </button>
+                }
+              </section>
+            }
+          </aside>
+
+          <section class="tb-canvas" aria-label="Şablon tasarım alanı" (click)="clearCanvasSelection()">
+            <div class="tb-canvas-heading">
+              <div>
+                <h2>Proje Bilgileri</h2>
+                <app-icon name="menu" [size]="14" />
+                <app-icon name="more" [size]="14" />
+              </div>
+            </div>
+
+            <div
+              class="tb-form-canvas"
+              cdkDropList
+              cdkDropListOrientation="mixed"
+              [cdkDropListData]="visibleCanvasNodes()"
+              (cdkDropListDropped)="dropField($event)"
+            >
+              @for (node of visibleCanvasNodes(); track node.id) {
+                <article
+                  class="tb-form-node"
+                  [class.tb-form-node--section]="node.kind === 'Section'"
+                  [class.tb-form-node--system]="node.kind === 'System'"
+                  [class.tb-form-node--custom]="node.kind === 'Custom'"
+                  [class.tb-form-node--wide]="node.kind === 'Section' || ['textarea', 'table', 'formGroup'].includes(node.contentType)"
+                  [class.tb-form-node--attachment]="node.contentType === 'attachment'"
+                  [class.tb-form-node--manager]="node.systemKey === 'manager'"
+                  [class.tb-form-node--unit-budget]="node.systemKey === 'unit' || node.systemKey === 'budget'"
+                  [class.tb-form-node--description]="node.systemKey === 'description'"
+                  [class.is-selected]="selectedFieldId() === node.id"
+                  [class.is-inactive]="!node.isActive"
+                  [attr.data-field-id]="node.id"
+                  [attr.data-content-type]="node.contentType"
+                  cdkDrag
+                  cdkDragPreviewContainer="parent"
+                  [cdkDragStartDelay]="{ mouse: 0, touch: 160 }"
+                  [cdkDragData]="node"
+                  tabindex="0"
+                  (click)="$event.stopPropagation(); selectField(node.id)"
+                  (keydown.enter)="selectField(node.id)"
+                  (keydown.space)="$event.preventDefault(); selectField(node.id)"
+                >
+                  <header class="tb-node-toolbar">
+                    <button
+                      type="button"
+                      class="tb-drag-handle"
+                      aria-label="Alanı sürükle"
+                      title="Alanı veya bu simgeyi sürükleyerek sırala"
+                      (click)="$event.stopPropagation(); selectField(node.id)"
+                    >
+                      <app-icon name="menu" [size]="15" />
+                    </button>
+                    <span class="tb-node-kind">{{ kindLabel(node.kind) }}</span>
+                    @if (node.isRequired) { <span class="tb-node-badge">Zorunlu</span> }
+                    @if (!node.isActive) { <span class="tb-node-badge tb-node-badge--muted">Pasif</span> }
+                    <button
+                      type="button"
+                      class="tb-node-more"
+                      aria-label="Alan işlemleri"
+                      (pointerdown)="$event.stopPropagation()"
+                      (click)="toggleFieldMenu(node.id, $event)"
+                    >
+                      <app-icon name="more" [size]="15" />
+                    </button>
+                    @if (fieldMenuId() === node.id) {
+                      <div class="tb-node-menu" (pointerdown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                        @if (node.kind !== 'System') {
+                          <button type="button" (click)="duplicateSelectedField()">Çoğalt</button>
+                        }
+                        <button type="button" (click)="resetSelectedField()">Reset</button>
+                        <button
+                          type="button"
+                          class="is-danger"
+                          [disabled]="!canDelete(node)"
+                          [title]="canDelete(node) ? 'Bu form elemanını sil' : 'Bu sistem alanı form için zorunludur'"
+                          (click)="removeSelectedField()"
+                        >
+                          Sil
+                        </button>
+                      </div>
+                    }
+                  </header>
+
+                  @if (node.kind === 'Section') {
+                    <div class="tb-node-section-content">
+                      <h3 class="tb-static-section-title">{{ node.label }}</h3>
+                      @if (node.hint) { <p>{{ node.hint }}</p> }
+                    </div>
+                  } @else {
+                    <div class="tb-node-control">
+                      @if (!['checkbox', 'attachment', 'image'].includes(node.contentType)) {
+                        <div class="tb-control-label">
+                          <span class="tb-static-field-label">{{ node.label }}</span>
+                          @if (node.isRequired) { <b>*</b> }
+                        </div>
+                      }
+                      @switch (node.contentType) {
+                        @case ('textarea') {
+                          <textarea rows="3" [placeholder]="node.kind === 'System' ? '' : node.hint" disabled></textarea>
+                        }
+                        @case ('number') {
+                          <input type="number" [placeholder]="node.hint" disabled />
+                        }
+                        @case ('date') {
+                          <select disabled><option>Seçiniz</option></select>
+                        }
+                        @case ('datetime') {
+                          <select disabled><option>Seçiniz</option></select>
+                        }
+                        @case ('checkbox') {
+                          <div class="tb-check-preview">
+                            <input type="checkbox" disabled />
+                            <span></span>
+                            <strong class="tb-static-field-label">{{ node.label }}</strong>
+                          </div>
+                        }
+                        @case ('yesNo') {
+                          <select disabled><option>Seçiniz</option><option>Evet</option><option>Hayır</option></select>
+                        }
+                        @case ('select') {
+                          <select disabled>
+                            <option>{{ node.hint || 'Seçiniz' }}</option>
+                            @for (option of node.options; track option) { <option>{{ option }}</option> }
+                          </select>
+                        }
+                        @case ('employee') {
+                          <select disabled><option>{{ node.hint || 'Çalışan seçiniz' }}</option></select>
+                        }
+                        @case ('department') {
+                          <select disabled><option>Departman seçiniz</option></select>
+                        }
+                        @case ('attachment') {
+                          <div class="tb-media-design">
+                            @if (node.kind !== 'System') {
+                              <strong class="tb-static-field-label">{{ node.label }}</strong>
+                            }
+                            <button type="button" class="tb-attachment-preview" disabled>
+                              <app-icon name="paperclip" [size]="16" /> {{ node.kind === 'System' ? node.label : 'Dosya seçme alanı' }}
+                            </button>
+                          </div>
+                        }
+                        @case ('image') {
+                          <div class="tb-media-design">
+                            <strong class="tb-static-field-label">{{ node.label }}</strong>
+                            <button type="button" class="tb-attachment-preview" disabled>
+                              <app-icon name="image" [size]="16" /> Resim seçme alanı
+                            </button>
+                          </div>
+                        }
+                        @case ('signature') {
+                          <div class="tb-signature-preview">
+                            <app-icon name="signature" [size]="18" />
+                            <input type="text" [placeholder]="node.hint" disabled />
+                          </div>
+                        }
+                        @case ('checklist') {
+                          <div class="tb-checklist-preview">
+                            @for (option of node.options; track option) {
+                              <label><input type="checkbox" disabled /><span>{{ option }}</span></label>
+                            }
+                          </div>
+                        }
+                        @case ('table') {
+                          <div class="tb-table-preview">
+                            <div class="tb-table-row tb-table-row--head">
+                              @for (header of node.options; track $index) { <strong>{{ header }}</strong> }
+                            </div>
+                            @for (row of [0, 1]; track row) {
+                              <div class="tb-table-row">
+                                @for (header of node.options; track $index; let column = $index) {
+                                  <input
+                                    [attr.aria-label]="header + ' ' + (row + 1)"
+                                    disabled
+                                  />
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+                        @case ('formGroup') {
+                          <div class="tb-form-group-preview">
+                            @for (subfield of node.options; track $index) {
+                              <label>
+                                <span>{{ subfield }}</span>
+                                <input [attr.aria-label]="subfield" disabled />
+                              </label>
+                            }
+                          </div>
+                        }
+                        @case ('currency') {
+                          <div class="tb-currency-preview">
+                            <input type="number" placeholder="0" disabled />
+                            <select aria-label="Para birimi" disabled><option>₺</option><option>$</option><option>€</option></select>
+                          </div>
+                        }
+                        @default {
+                          <input type="text" [placeholder]="node.kind === 'System' ? '' : node.hint" disabled />
+                        }
+                      }
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+
+          <aside class="tb-properties" aria-label="Şablon özellikleri">
+            <section class="tb-properties-card" [class.is-disabled]="!selectedField()">
+              <h2>Form Özellikleri</h2>
+              @if (selectedField(); as field) {
+                <div class="tb-selected-field-heading">
+                  <div>
+                    <span>{{ kindLabel(field.kind) }}</span>
+                    <strong>{{ field.label || 'Adsız Alan' }}</strong>
+                  </div>
+                  <app-icon [name]="field.kind === 'Section' ? 'table' : 'sliders'" [size]="16" />
+                </div>
+                <p class="tb-field-context">{{ fieldPropertyDescription(field) }}</p>
+                <label>
+                  <span>Alan Etiketi</span>
+                  <input class="tb-readonly-label" [value]="field.label" readonly />
+                </label>
+
+                @if (field.kind === 'System') {
+                  <label>
+                    <span>{{ fieldHintLabel(field) }}</span>
+                    <textarea rows="2" [ngModel]="field.hint" (ngModelChange)="setFieldHint($event)"></textarea>
+                  </label>
+                  <label>
+                    <span>İçerik Tipi</span>
+                    <select disabled><option>{{ contentTypeLabel(field.contentType) }}</option></select>
+                  </label>
+                  @if (boundListLabel(field)) {
+                    <label>
+                      <span>Bağlı Liste Adı</span>
+                      <select disabled><option>{{ boundListLabel(field) }}</option></select>
+                    </label>
+                  }
+                } @else {
+                  <label>
+                    <span>{{ fieldHintLabel(field) }}</span>
+                    <textarea rows="2" [ngModel]="field.hint" (ngModelChange)="setFieldHint($event)"></textarea>
+                  </label>
+                  <label>
+                    <span>İçerik Tipi</span>
+                    <select [disabled]="field.kind === 'Section'" [ngModel]="field.contentType" (ngModelChange)="setContentType($event)">
+                      <option value="text">Kısa Metin</option>
+                      <option value="textarea">Uzun Metin</option>
+                      <option value="number">Sayı</option>
+                      <option value="date">Tarih</option>
+                      <option value="datetime">Tarih ve Saat</option>
+                      <option value="select">Listeden Seçim</option>
+                      <option value="checkbox">Checkbox</option>
+                      <option value="yesNo">Evet / Hayır</option>
+                      <option value="employee">Çalışan Seçimi</option>
+                      <option value="department">Departman Seçimi</option>
+                      <option value="checklist">Kontrol Listesi</option>
+                      <option value="formGroup">Form Elemanı</option>
+                      <option value="table">Tablo</option>
+                      <option value="attachment">Dosya Eki</option>
+                      <option value="image">Resim</option>
+                      <option value="signature">İmza Alanı</option>
+                      @if (field.kind === 'Section') { <option value="section">Bölüm Başlığı</option> }
+                    </select>
+                  </label>
+
+                  @if (field.contentType === 'select') {
+                    <label>
+                      <span>Bağlı Liste Adı</span>
+                      <select [ngModel]="field.listName" (ngModelChange)="setListName($event)">
+                        <option value="manual">Manuel Seçenekler</option>
+                        <option value="employee">Çalışan Listesi</option>
+                        <option value="department">Departman Listesi</option>
+                      </select>
+                    </label>
+                    @if (field.listName === 'manual') {
+                      <label>
+                        <span>Liste Seçenekleri <small>Her satıra bir seçenek</small></span>
+                        <textarea rows="4" [ngModel]="optionsText(field)" (ngModelChange)="setOptionsText($event)"></textarea>
+                      </label>
+                    }
+                  }
+
+                  @if (field.contentType === 'employee' || field.contentType === 'department') {
+                    <label>
+                      <span>Bağlı Liste Adı</span>
+                      <input [ngModel]="boundListLabel(field)" disabled />
+                    </label>
+                  }
+
+                  @if (['checklist', 'table', 'formGroup'].includes(field.contentType)) {
+                    <label>
+                      <span>
+                        {{
+                          field.contentType === 'table'
+                            ? 'Sütun Başlıkları'
+                            : field.contentType === 'formGroup'
+                              ? 'Alt Alanlar'
+                              : 'Kontrol Maddeleri'
+                        }}
+                        <small>Her satıra bir değer</small>
+                      </span>
+                      <textarea rows="4" [ngModel]="optionsText(field)" (ngModelChange)="setOptionsText($event)"></textarea>
+                    </label>
+                  }
+                }
+
+                <div class="tb-switches">
+                  <label [class.is-locked]="isActiveLocked(field)">
+                    <input
+                      type="checkbox"
+                      [disabled]="isActiveLocked(field)"
+                      [checked]="field.isActive"
+                      (change)="setIsActive(!field.isActive)"
+                    />
+                    <span></span><strong>Aktif</strong>
+                  </label>
+                  <label [class.is-locked]="field.kind === 'Section' || isRequiredLocked(field)">
+                    <input
+                      type="checkbox"
+                      [disabled]="field.kind === 'Section' || isRequiredLocked(field)"
+                      [checked]="field.isRequired"
+                      (change)="setIsRequired(!field.isRequired)"
+                    />
+                    <span></span><strong>Zorunlu Alan</strong>
+                  </label>
+                  <small>
+                    @if (field.kind === 'Section') {
+                      Bölüm başlıkları veri toplamaz.
+                    } @else if (isRequiredLocked(field)) {
+                      Bu alan proje kaydı için sistem tarafından zorunludur.
+                    } @else {
+                      Boşsa formun gönderilmesine izin verme.
+                    }
+                  </small>
+                </div>
+
+              } @else {
+                <p class="tb-no-selection">Özelliklerini düzenlemek için kanvastan bir alan seçin.</p>
+              }
+            </section>
+
+            <section class="tb-template-card">
+              <header>
+                <h2>Şablon Bilgileri</h2>
+                <div class="tb-header-actions">
+                  <button type="button" (click)="showPreview()"><app-icon name="eye" [size]="14" /> Ön İzle</button>
+                </div>
+              </header>
+              <label>
+                <span>Şablon Adı</span>
+                <input
+                  placeholder="Ör. Fizibilite Projesi Standart Şablonu"
+                  [ngModel]="templateName()"
+                  (ngModelChange)="templateName.set($event); dirty.set(true)"
+                />
+              </label>
+              <label>
+                <span>Proje Tipi</span>
+                <select [ngModel]="projectType()" (ngModelChange)="setProjectType($event)">
+                  <option>Basit Proje</option>
+                  <option>Çok Birimli Proje</option>
+                </select>
+              </label>
+              <p class="tb-template-summary">
+                {{ visibleCanvasNodes().length }} form elemanı · {{ addedFields().length }} özel eleman
+              </p>
+              @if (errorMessage()) { <p class="tb-error" role="alert">{{ errorMessage() }}</p> }
+              <footer>
+                <button class="tb-cancel" type="button" (click)="cancel()" [disabled]="saving()">Vazgeç</button>
+                <button class="tb-save" type="button" (click)="saveTemplate()" [disabled]="saving()">
+                  {{ saving() ? 'Kaydediliyor…' : isEditing() ? 'Güncelle' : 'Kaydet' }}
+                </button>
+              </footer>
+            </section>
+          </aside>
+        </div>
+      } @else {
+        <div class="tb-preview">
+          <section class="tb-preview-form">
+            <header class="tb-preview-form-heading">
+              <h2>Proje Bilgileri</h2>
+              <div class="tb-preview-type-pills">
+                <span>Basit Proje</span>
+                <strong>{{ projectType() }}</strong>
+              </div>
+            </header>
+            <div class="tb-preview-node-list">
+              @for (node of visibleCanvasNodes(); track node.id) {
+                @if (node.isActive) {
+                  @if (node.kind === 'Section') {
+                    <section class="tb-preview-section-title">
+                      <h3>{{ node.label }}</h3>
+                      @if (node.hint) { <p>{{ node.hint }}</p> }
+                    </section>
+                  } @else {
+                    <div
+                      class="tb-preview-control"
+                      [class.tb-preview-control--wide]="['textarea', 'attachment', 'image', 'table'].includes(node.contentType)"
+                      [class.tb-preview-control--project-name]="node.systemKey === 'projectName'"
+                      [class.tb-preview-control--manager]="node.systemKey === 'manager'"
+                      [class.tb-preview-control--custom]="node.kind === 'Custom'"
+                    >
+                      @if (node.contentType !== 'checkbox' && node.contentType !== 'attachment') {
+                        <label>{{ node.label }} @if (node.isRequired) { <b>*</b> }</label>
+                      }
+                      @switch (node.contentType) {
+                        @case ('textarea') {
+                          <textarea rows="3" [placeholder]="node.kind === 'System' ? '' : node.hint"></textarea>
+                        }
+                        @case ('number') { <input type="number" [placeholder]="node.hint" /> }
+                        @case ('date') {
+                          <select>
+                            <option>{{ previewDateValue(node) }}</option>
+                          </select>
+                        }
+                        @case ('datetime') { <input type="datetime-local" /> }
+                        @case ('checkbox') { <label class="tb-check-preview"><input type="checkbox" /><span></span><strong>{{ node.label }}</strong></label> }
+                        @case ('yesNo') { <select><option>Seçiniz</option><option>Evet</option><option>Hayır</option></select> }
+                        @case ('select') {
+                          <select>
+                            <option>{{ node.hint || 'Seçiniz' }}</option>
+                            @for (option of node.options; track option) { <option>{{ option }}</option> }
+                          </select>
+                        }
+                        @case ('employee') {
+                          <div class="tb-preview-person-row">
+                            @if (node.systemKey === 'manager') {
+                              <span class="tb-preview-person-avatar" aria-hidden="true">
+                                <app-icon name="user" [size]="11" />
+                              </span>
+                            }
+                            <select>
+                              <option>{{ node.systemKey === 'manager' ? 'Ahmet Görür' : (node.hint || 'Çalışan seçiniz') }}</option>
+                            </select>
+                            @if (node.systemKey === 'manager') {
+                              <button type="button">Ekle <app-icon name="plus" [size]="13" /></button>
+                            }
+                          </div>
+                        }
+                        @case ('department') { <select><option>Departman seçiniz</option></select> }
+                        @case ('attachment') {
+                          <label class="tb-preview-attachment">
+                            <input type="file" />
+                            <app-icon name="paperclip" [size]="16" /> {{ node.label }}
+                          </label>
+                        }
+                        @case ('image') {
+                          <label class="tb-preview-attachment">
+                            <input type="file" accept="image/*" />
+                            <app-icon name="image" [size]="16" /> Resim seçin
+                          </label>
+                        }
+                        @case ('signature') {
+                          <div class="tb-signature-preview">
+                            <app-icon name="signature" [size]="18" />
+                            <input type="text" [placeholder]="node.hint || 'İmzalayanın adı ve soyadı'" />
+                          </div>
+                        }
+                        @case ('checklist') {
+                          <div class="tb-checklist-preview">
+                            @for (option of node.options; track option) {
+                              <label><input type="checkbox" /><span>{{ option }}</span></label>
+                            }
+                          </div>
+                        }
+                        @case ('table') {
+                          <div class="tb-table-preview">
+                            <div class="tb-table-row tb-table-row--head">
+                              @for (header of node.options; track $index) { <strong>{{ header }}</strong> }
+                            </div>
+                            @for (row of [0, 1]; track row) {
+                              <div class="tb-table-row">
+                                @for (header of node.options; track $index) {
+                                  <input [attr.aria-label]="header + ' ' + (row + 1)" />
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+                        @case ('formGroup') {
+                          <fieldset class="tb-form-group-preview">
+                            @for (subfield of node.options; track $index) {
+                              <label>
+                                <span>{{ subfield }}</span>
+                                <input [attr.aria-label]="subfield" />
+                              </label>
+                            }
+                          </fieldset>
+                        }
+                        @case ('currency') { <div class="tb-currency-preview"><input placeholder="0" /><select><option>₺</option><option>$</option><option>€</option></select></div> }
+                        @default {
+                          <input
+                            type="text"
+                            [placeholder]="node.systemKey === 'projectName' ? '' : node.hint"
+                          />
+                        }
+                      }
+                    </div>
+                  }
+                }
+              }
+            </div>
+            <section class="tb-preview-type-section">
+              <h3>{{ typeSpecificTitle() }}</h3>
+              <p>{{ typeSpecificDescription() }}</p>
+            </section>
+          </section>
+          <aside class="tb-preview-card">
+            <header><h2>Önizleme</h2><span><app-icon name="eye" [size]="13" /> Ön İzle</span></header>
+            <label><span>Şablon Adı</span><input [value]="templateName()" readonly /></label>
+            <label><span>Proje Tipi</span><select disabled><option>{{ projectType() }}</option></select></label>
+            <button type="button" (click)="closePreview()">Ön İzlemeyi Kapat</button>
+          </aside>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (saveDialogOpen()) {
+    <div class="tb-dialog-backdrop" role="presentation">
+      <section class="tb-success-dialog" role="dialog" aria-modal="true" aria-labelledby="template-success-title">
+        <button class="tb-dialog-close" type="button" aria-label="Pencereyi kapat" (click)="saveDialogOpen.set(false)">
+          <app-icon name="x" [size]="16" />
+        </button>
+        <div class="tb-success-check"><app-icon name="check" [size]="82" /></div>
+        <h2 id="template-success-title">Şablon Kaydedildi</h2>
+        <p class="tb-success-message">
+          <span>Tebrikler İşleminiz Tamamlandı</span>
+          <span><strong>{{ templateName() }}</strong> Adıyla Başarılı Bir Şablon</span>
+          <span>Oluşturulmuştur</span>
+        </p>
+        <footer>
+          <button type="button" (click)="returnToProject()">Projeye Dön</button>
+          <button type="button" (click)="goToSavedTemplate()">Şablona Git</button>
+        </footer>
+      </section>
+    </div>
+  }
+</main>

@@ -1,0 +1,693 @@
+<main class="pm-canvas" [class.pm-canvas--compact]="railCompact()">
+  <section class="pm-shell" aria-label="Projeler Modülü">
+    <aside class="pm-rail" aria-label="Ana menü">
+      <button class="pm-menu-button" type="button" aria-label="Menüyü daralt" (click)="railCompact.update((value) => !value)">
+        <app-icon name="menu" [size]="20" />
+      </button>
+
+      <nav class="pm-rail-group" aria-label="Hızlı erişim">
+        @for (item of primaryRail; track item.label) {
+          <button class="pm-rail-button" type="button" [attr.aria-label]="item.label" [title]="item.label">
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--modules" aria-label="Modüller">
+        @for (item of moduleRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            [class.pm-rail-button--active]="item.active"
+            type="button"
+            [attr.aria-label]="item.label"
+            [attr.aria-current]="item.active ? 'page' : null"
+            [title]="item.label"
+            (click)="item.label === 'Organizasyon' ? goToDepartments() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+
+      <nav class="pm-rail-group pm-rail-group--utility" aria-label="Araçlar">
+        @for (item of utilityRail; track item.label) {
+          <button
+            class="pm-rail-button"
+            type="button"
+            [attr.aria-label]="item.label"
+            [title]="item.label"
+            (click)="item.label === 'Şablonlar' ? goToTemplates() : null"
+          >
+            <app-icon [name]="item.icon" [size]="18" />
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <div class="pm-workspace">
+      <header class="pm-topbar">
+        <div class="pm-title-wrap">
+          <h1>Projeler Modülü</h1>
+          <button class="pm-icon-plain" type="button" aria-label="Modülü paylaş" title="Paylaş">
+            <app-icon name="share" [size]="19" />
+          </button>
+        </div>
+
+        <div class="pm-top-actions">
+          @if (searchOpen()) {
+            <label class="pm-top-search">
+              <span class="sr-only">Projelerde ara</span>
+              <app-icon name="search" [size]="17" />
+              <input
+                type="search"
+                placeholder="Proje, yönetici veya birim ara"
+                [value]="searchQuery()"
+                (input)="searchQuery.set($any($event.target).value)"
+                autofocus
+              />
+              @if (searchQuery()) {
+                <button type="button" class="pm-search-clear" aria-label="Aramayı temizle" (click)="clearSearch()">
+                  <app-icon name="x" [size]="13" />
+                </button>
+              }
+            </label>
+          } @else {
+            <button class="pm-top-icon" type="button" aria-label="Ara" (click)="toggleSearch()">
+              <app-icon name="search" [size]="20" />
+            </button>
+          }
+
+          <button class="pm-top-icon" type="button" aria-label="Yardım">
+            <app-icon name="help" [size]="19" />
+          </button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Mesajlar">
+            <app-icon name="mail" [size]="19" />
+            <span>1</span>
+          </button>
+          <button class="pm-top-icon pm-top-icon--badged" type="button" aria-label="Bildirimler">
+            <app-icon name="bell" [size]="19" />
+            <span>3</span>
+          </button>
+
+          <div class="pm-profile-wrap">
+            <button class="pm-profile" type="button" aria-label="Profil menüsü" (click)="toggleProfile()">
+              <strong>{{ currentUserName() }}</strong>
+              <span class="pm-avatar" aria-hidden="true">SG</span>
+            </button>
+            @if (profileOpen()) {
+              <div class="pm-popover pm-profile-menu">
+                <strong>{{ currentUserName() }}</strong>
+                <span>Proje Yöneticisi</span>
+                <button type="button">Profilim</button>
+                <button type="button" (click)="logout()">Oturumu Kapat</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+
+      <section class="pm-module" [class.pm-module--cards]="activeView() === 'cards'">
+        <div class="pm-commandbar">
+          <div class="pm-view-tabs" aria-label="Proje görünümleri">
+            <button type="button" [class.is-active]="activeView() === 'list'" (click)="setView('list')">Proje Listeleri</button>
+            <button type="button" [class.is-active]="activeView() === 'cards'" (click)="setView('cards')">Proje Kartları</button>
+            <button type="button" [class.is-active]="activeView() === 'gantt'" (click)="setView('gantt')">Gant Şeması</button>
+          </div>
+
+          <div class="pm-stats" aria-label="Proje istatistikleri">
+            <span><app-icon name="layers" [size]="14" /> Toplam <strong>{{ totalCount() }}</strong></span>
+            <span><app-icon name="clock" [size]="14" /> Devam Eden <strong>{{ activeCount() }}</strong></span>
+            <span><app-icon name="check" [size]="14" /> Tamamlanan <strong>{{ completedCount() }}</strong></span>
+            @if (lastUpdatedAt()) {
+              <span
+                class="pm-sync-status"
+                [class.pm-sync-status--warning]="backgroundRefreshFailed()"
+                [title]="backgroundRefreshFailed() ? 'Arka plan yenilemesi başarısız oldu; mevcut veriler korunuyor.' : 'Projeler otomatik olarak yenilenir.'"
+              >
+                <app-icon [name]="backgroundRefreshFailed() ? 'alert' : 'clock'" [size]="13" />
+                {{ backgroundRefreshFailed() ? 'Yenileme bekliyor' : 'Güncellendi ' + lastUpdatedLabel() }}
+              </span>
+            }
+          </div>
+
+          <div class="pm-command-actions">
+            @if (searchOpen()) {
+              <label class="pm-command-search">
+                <span class="sr-only">Projelerde ara</span>
+                <app-icon name="search" [size]="15" />
+                <input
+                  type="search"
+                  placeholder="Proje, yönetici veya birim ara"
+                  [value]="searchQuery()"
+                  (input)="searchQuery.set($any($event.target).value)"
+                  autofocus
+                />
+                @if (searchQuery()) {
+                  <button type="button" aria-label="Aramayı temizle" (click)="clearSearch()">
+                    <app-icon name="x" [size]="12" />
+                  </button>
+                }
+              </label>
+            }
+            @if (activeView() === 'cards' && canManageProjects()) {
+              <button
+                class="pm-board-quick-add pm-board-project-create"
+                type="button"
+                aria-label="Yeni proje ekle"
+                title="Proje Ekle"
+                (click)="createProject()"
+              >
+                <app-icon name="plus" [size]="14" />
+                <span>Proje Ekle</span>
+              </button>
+              <button
+                class="pm-board-quick-add pm-board-column-create"
+                type="button"
+                aria-label="Yeni pano sütunu ekle"
+                title="Sütun Ekle"
+                (click)="openCreateBoardColumnDialog()"
+              >
+                <app-icon name="plus" [size]="14" />
+                <span>Sütun Ekle</span>
+              </button>
+            }
+            <button
+              class="pm-round-action"
+              type="button"
+              [attr.aria-label]="searchOpen() ? 'Aramayı kapat' : 'Ara'"
+              [title]="searchOpen() ? 'Aramayı kapat' : 'Ara'"
+              (click)="toggleSearch()"
+            >
+              <app-icon [name]="searchOpen() ? 'x' : 'search'" [size]="16" />
+            </button>
+            <div class="pm-filter-wrap">
+              <button
+                class="pm-text-action"
+                type="button"
+                [class.is-active]="columnsOpen()"
+                [attr.aria-expanded]="columnsOpen()"
+                (click)="toggleColumns()"
+              >
+                <app-icon name="apps" [size]="14" />
+                {{ visibleColumnCount() === projectColumns.length ? 'Tümü' : visibleColumnCount() + ' Kolon' }}
+              </button>
+              @if (columnsOpen()) {
+                <div class="pm-popover pm-column-menu">
+                  <header><strong>Görünür kolonlar</strong><small>En az bir kolon açık kalır</small></header>
+                  @for (column of projectColumns; track column.key) {
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="isColumnVisible(column.key)"
+                        (change)="toggleColumn(column.key)"
+                      />
+                      {{ column.label }}
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+            <div class="pm-filter-wrap">
+              <button class="pm-text-action" type="button" [class.is-active]="filtersOpen()" [attr.aria-expanded]="filtersOpen()" (click)="toggleFilters()">
+                <app-icon name="sliders" [size]="14" /> Filtre
+                @if (activeFilterCount() > 0) { <span class="pm-filter-badge">{{ activeFilterCount() }}</span> }
+              </button>
+              @if (filtersOpen()) {
+                <div class="pm-popover pm-filter-menu">
+                  <header>
+                    <strong>Görünümü filtrele</strong>
+                    @if (activeFilterCount() > 0) {
+                      <button type="button" class="pm-filter-clear" (click)="clearAllFilters()">Filtreleri Temizle</button>
+                    }
+                  </header>
+                  <label><input type="checkbox" [checked]="showCompleted()" (change)="showCompleted.set(!showCompleted())" /> Tamamlananları göster</label>
+                  <label><input type="checkbox" [checked]="delayedOnly()" (change)="delayedOnly.set(!delayedOnly())" /> Yalnızca gecikenler</label>
+                  <label><input type="checkbox" [checked]="assignedOnly()" (change)="assignedOnly.set(!assignedOnly())" /> Bana atananlar</label>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (activeView() === 'list') {
+        <div class="pm-subbar">
+          <div class="pm-type-tabs" aria-label="Proje türü filtresi">
+            @for (type of projectTypes; track type) {
+              <button type="button" [class.is-active]="activeType() === type" (click)="activeType.set(type)">{{ type }}</button>
+            }
+          </div>
+          @if (canManageProjects()) {
+            <button class="pm-add-project" type="button" (click)="createProject()">
+              Proje Ekle <app-icon name="plus" [size]="18" />
+            </button>
+          }
+        </div>
+
+        <div class="pm-table-card">
+          <div
+            class="pm-table-scroll"
+            role="region"
+            aria-label="Proje listesi, kaydırılabilir tablo"
+            tabindex="0"
+          >
+            <table>
+              <colgroup>
+                <col class="pm-check" />
+                <col class="pm-col--name" />
+                @if (isColumnVisible('manager')) { <col class="pm-col--manager" /> }
+                @if (isColumnVisible('unit')) { <col class="pm-col--unit" /> }
+                @if (isColumnVisible('status')) { <col class="pm-col--status" /> }
+                @if (isColumnVisible('progress')) { <col class="pm-col--progress" /> }
+                @if (isColumnVisible('deviation')) { <col class="pm-col--deviation" /> }
+                @if (isColumnVisible('budget')) { <col class="pm-col--budget" /> }
+                @if (isColumnVisible('type')) { <col class="pm-col--type" /> }
+                @if (isColumnVisible('start')) { <col class="pm-col--start" /> }
+                @if (isColumnVisible('end')) { <col class="pm-col--end" /> }
+                <col class="pm-col--actions" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="pm-check"><input type="checkbox" aria-label="Tüm projeleri seç" /></th>
+                  <th class="pm-col--name"><button class="pm-sort" type="button" (click)="sortBy('name')">Proje Adı <span>{{ sortIndicator('name') }}</span></button></th>
+                  @if (isColumnVisible('manager')) { <th class="pm-col--manager"><button class="pm-sort" type="button" (click)="sortBy('manager')">Yöneten <span>{{ sortIndicator('manager') }}</span></button></th> }
+                  @if (isColumnVisible('unit')) { <th class="pm-col--unit"><button class="pm-sort" type="button" (click)="sortBy('unit')">Birim <span>{{ sortIndicator('unit') }}</span></button></th> }
+                  @if (isColumnVisible('status')) { <th class="pm-col--status"><button class="pm-sort" type="button" (click)="sortBy('status')">Durum <span>{{ sortIndicator('status') }}</span></button></th> }
+                  @if (isColumnVisible('progress')) { <th class="pm-col--progress"><button class="pm-sort" type="button" (click)="sortBy('progress')">İlerleme <span>{{ sortIndicator('progress') }}</span></button></th> }
+                  @if (isColumnVisible('deviation')) { <th class="pm-col--deviation"><button class="pm-sort" type="button" (click)="sortBy('deviation')">Sapma Oranı <span>{{ sortIndicator('deviation') }}</span></button></th> }
+                  @if (isColumnVisible('budget')) { <th class="pm-col--budget"><button class="pm-sort" type="button" (click)="sortBy('budget')">Bütçe <span>{{ sortIndicator('budget') }}</span></button></th> }
+                  @if (isColumnVisible('type')) { <th class="pm-col--type"><button class="pm-sort" type="button" (click)="sortBy('type')">Proje Türü <span>{{ sortIndicator('type') }}</span></button></th> }
+                  @if (isColumnVisible('start')) { <th class="pm-col--start"><button class="pm-sort" type="button" (click)="sortBy('start')">Başl.Tarihi <span>{{ sortIndicator('start') }}</span></button></th> }
+                  @if (isColumnVisible('end')) { <th class="pm-col--end"><button class="pm-sort" type="button" (click)="sortBy('end')">Bitiş Tarihi <span>{{ sortIndicator('end') }}</span></button></th> }
+                  <th class="pm-col--actions" aria-label="İşlemler"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of visibleRows(); track $index) {
+                  <tr
+                    class="pm-project-row"
+                    tabindex="0"
+                    [attr.aria-label]="row.name + ' proje detayını aç'"
+                    (click)="openProject(row)"
+                    (keydown.enter)="openProjectFromListRowKeyboard(row, $event)"
+                    (keydown.space)="openProjectFromListRowKeyboard(row, $event)"
+                  >
+                    <td class="pm-check"><input type="checkbox" [attr.aria-label]="row.name + ' projesini seç'" (click)="$event.stopPropagation()" /></td>
+                    <td class="pm-project-name pm-col--name">{{ row.name }}</td>
+                    @if (isColumnVisible('manager')) { <td class="pm-col--manager"><span class="pm-person-icon"><app-icon name="user" [size]="12" /></span>{{ row.manager }}</td> }
+                    @if (isColumnVisible('unit')) { <td class="pm-col--unit">{{ row.unit }}</td> }
+                    @if (isColumnVisible('status')) { <td class="pm-col--status">{{ row.statusLabel }}</td> }
+                    @if (isColumnVisible('progress')) { <td class="pm-col--progress">
+                      <span class="pm-progress-value" [class]="'pm-progress-value pm-progress-value--' + row.progressTone">%{{ row.progress }}</span>
+                      <span
+                        class="pm-progress-ring"
+                        [class]="'pm-progress-ring pm-progress-ring--' + row.progressTone"
+                        [style.--progress]="row.progress * 3.6 + 'deg'"
+                        aria-hidden="true"
+                      ></span>
+                    </td> }
+                    @if (isColumnVisible('deviation')) { <td class="pm-col--deviation">
+                      <span [class]="'pm-deviation pm-deviation--' + row.deviationTone">{{ row.deviation }}</span>
+                    </td> }
+                    @if (isColumnVisible('budget')) { <td class="pm-col--budget">{{ row.budget }}</td> }
+                    @if (isColumnVisible('type')) { <td class="pm-col--type">{{ row.type }}</td> }
+                    @if (isColumnVisible('start')) { <td class="pm-col--start">{{ row.start }}</td> }
+                    @if (isColumnVisible('end')) { <td class="pm-col--end">{{ row.end }}</td> }
+                    <td class="pm-col--actions">
+                      <span class="pm-row-actions-inner">
+                        @if (canDeleteProjects()) {
+                          <button class="pm-row-delete" type="button" [attr.aria-label]="row.name + ' projesini sil'" (click)="requestDeleteProject(row, $event)"><app-icon name="trash" [size]="13" /></button>
+                        }
+                        <button class="pm-detail" type="button" (click)="$event.stopPropagation(); openProject(row)">Detay</button>
+                      </span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td class="pm-empty-row" [attr.colspan]="visibleColumnCount() + 3">
+                    @if (loading()) {
+                      Projeler yükleniyor…
+                    } @else if (loadError()) {
+                      <p>Projeler yüklenemedi: {{ loadError() }}</p>
+                      <button type="button" class="pm-retry" (click)="retryLoadProjects()">Yeniden Dene</button>
+                    } @else if (activeFilterCount() > 0) {
+                      <p>Aramanızla eşleşen proje bulunamadı.</p>
+                      <button type="button" class="pm-retry" (click)="clearAllFilters()">Filtreleri Temizle</button>
+                    } @else {
+                      Henüz proje oluşturulmadı.
+                    }
+                  </td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <footer class="pm-footer">
+            <span>Son Giriş: 06.03.2024 12:33</span>
+            <nav aria-label="Yardım bağlantıları">
+              <button type="button">Hakkımızda</button>
+              <button type="button">SSS</button>
+              <button type="button">Çözüm Merkezi</button>
+            </nav>
+            <span>Versions&nbsp;&nbsp; 4.50</span>
+          </footer>
+        </div>
+        } @else if (activeView() === 'cards') {
+          <div class="pm-board-shell">
+            <p class="sr-only" aria-live="polite">{{ kanbanAnnouncement() }}</p>
+            @if (loading()) {
+              <p class="pm-view-state">Projeler yükleniyor…</p>
+            } @else if (loadError()) {
+              <p class="pm-view-state">
+                Projeler yüklenemedi: {{ loadError() }}
+                <button type="button" class="pm-retry" (click)="retryLoadProjects()">Yeniden Dene</button>
+              </p>
+            } @else if (!hasProjects()) {
+              <p class="pm-view-state">Henüz proje oluşturulmadı.</p>
+            }
+            <div
+              class="pm-board"
+              aria-label="Proje kartları Kanban panosu"
+              [style.--board-column-count]="boardColumns().length || 1"
+            >
+              @for (column of boardColumns(); track column.key; let columnIndex = $index) {
+                <section class="pm-board-column" [style.--column-color]="column.color">
+                  <header class="pm-board-column-header">
+                    <div>
+                      <span class="pm-board-column-color" aria-hidden="true"></span>
+                      <strong>{{ column.title }}</strong>
+                      <span class="pm-column-delta">+{{ column.cards.length }}</span>
+                    </div>
+                    <div class="pm-board-column-meta">
+                      <span class="pm-column-count">{{ column.cards.length }} Proje</span>
+                      @if (canManageProjects() && !column.isUnassigned) {
+                        <span class="pm-board-column-actions">
+                          <button
+                            type="button"
+                            [disabled]="columnIndex === 0 || reorderingBoardColumns()"
+                            [attr.aria-label]="column.title + ' sütununu sola taşı'"
+                            (click)="moveBoardColumn(columnIndex, -1, $event)"
+                          ><app-icon name="arrow-left" [size]="11" /></button>
+                          <button
+                            type="button"
+                            [disabled]="columnIndex === boardColumnDefinitions().length - 1 || reorderingBoardColumns()"
+                            [attr.aria-label]="column.title + ' sütununu sağa taşı'"
+                            (click)="moveBoardColumn(columnIndex, 1, $event)"
+                          ><app-icon name="arrow-right" [size]="11" /></button>
+                          @if (!column.isProtected) {
+                            <button type="button" [attr.aria-label]="column.title + ' sütununu düzenle'" (click)="openEditBoardColumnDialog(column, $event)">
+                              <app-icon name="edit" [size]="11" />
+                            </button>
+                            <button type="button" [attr.aria-label]="column.title + ' sütununu kaldır'" (click)="requestDeleteBoardColumn(column, $event)">
+                              <app-icon name="trash" [size]="11" />
+                            </button>
+                          }
+                        </span>
+                      }
+                    </div>
+                  </header>
+
+                  <div
+                    class="pm-board-cards"
+                    cdkDropList
+                    [id]="boardColumnId(columnIndex)"
+                    [cdkDropListData]="column.cards"
+                    [cdkDropListConnectedTo]="boardColumnIds()"
+                    [cdkDropListDisabled]="!canManageProjects() || boardMoveInProgress()"
+                    (cdkDropListDropped)="dropProjectCard($event, columnIndex)"
+                  >
+                    @for (card of column.cards; track card.id; let cardIndex = $index) {
+                      <article
+                        class="pm-project-card"
+                        cdkDrag
+                        [cdkDragData]="card"
+                        [cdkDragDisabled]="!canManageProjects() || boardMoveInProgress()"
+                        [cdkDragStartDelay]="{ touch: 180, mouse: 0 }"
+                        [attr.title]="canManageProjects() ? 'Kartı tutup sürükleyerek sıralayabilir veya başka bir sütuna taşıyabilirsiniz.' : null"
+                        role="link"
+                        tabindex="0"
+                        [attr.aria-label]="card.name + ' proje detayını aç. Oklarla sırala; Alt ve sağ/sol oklarla sütun değiştir.'"
+                        (cdkDragStarted)="startProjectCardDrag()"
+                        (cdkDragEnded)="finishProjectCardDrag()"
+                        (click)="openProjectCard(card)"
+                        (keydown.enter)="openProject(card)"
+                        (keydown.space)="$event.preventDefault(); openProject(card)"
+                        (keydown)="moveProjectCardByKeyboard($event, columnIndex, cardIndex)"
+                      >
+                        <header>
+                          <strong>{{ card.name }}</strong>
+                          @if (canDeleteProjects()) {
+                            <button class="pm-row-delete" type="button" [attr.aria-label]="card.name + ' projesini sil'" (click)="requestDeleteProject(card, $event)"><app-icon name="trash" [size]="12" /></button>
+                          }
+                          <span class="pm-card-grip" aria-hidden="true">
+                            <app-icon name="grip" [size]="17" />
+                          </span>
+                        </header>
+                        <div class="pm-card-body">
+                          <span class="pm-card-manager"><app-icon name="user" [size]="12" /> {{ card.manager }}</span>
+                          <strong>{{ card.unit }}</strong>
+                          <span>{{ card.type }}</span>
+                          <span>{{ card.budget }}</span>
+                          <span class="pm-card-business-status">{{ card.status === 'Draft' ? 'Taslak' : card.status === 'Active' ? 'Aktif' : card.status === 'Completed' ? 'Tamamlandı' : 'İptal' }}</span>
+                          <div class="pm-card-status">
+                            <span [class]="'pm-card-deviation pm-card-deviation--' + card.deviationTone">{{ card.deviation }}</span>
+                            <span class="pm-card-progress" [class]="'pm-card-progress pm-card-progress--' + card.progressTone">%{{ card.progress }}</span>
+                            <span
+                              class="pm-progress-ring pm-progress-ring--card"
+                              [class]="'pm-progress-ring pm-progress-ring--card pm-progress-ring--' + card.progressTone"
+                              [style.--progress]="card.progress * 3.6 + 'deg'"
+                              aria-hidden="true"
+                            ></span>
+                          </div>
+                        </div>
+                      </article>
+                    }
+
+                    @if (canManageProjects()) {
+                      <button type="button" class="pm-board-add" (click)="createProject()">
+                        <app-icon name="plus" [size]="18" />
+                        <span>Proje Ekle</span>
+                      </button>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+          </div>
+        } @else if (activeView() === 'gantt') {
+          <div class="pm-subbar">
+            <div class="pm-type-tabs" aria-label="Proje türü filtresi">
+              @for (type of projectTypes; track type) {
+                <button type="button" [class.is-active]="activeType() === type" (click)="activeType.set(type)">{{ type }}</button>
+              }
+            </div>
+            @if (canManageProjects()) {
+              <button class="pm-add-project" type="button" (click)="createProject()">
+                Proje Ekle <app-icon name="plus" [size]="18" />
+              </button>
+            }
+          </div>
+
+          <div class="pm-gantt-card">
+            @if (loading()) {
+              <p class="pm-view-state">Gantt verisi yükleniyor…</p>
+            } @else if (loadError()) {
+              <p class="pm-view-state">
+                Gantt verisi yüklenemedi: {{ loadError() }}
+                <button type="button" class="pm-retry" (click)="retryLoadProjects()">Yeniden Dene</button>
+              </p>
+            } @else if (!ganttRows().length) {
+              <p class="pm-view-state">
+                {{ hasProjects() ? 'Seçili filtrelerle eşleşen proje bulunamadı.' : 'Henüz proje oluşturulmadı.' }}
+              </p>
+            }
+            <div class="pm-gantt-scroll">
+              <div
+                class="pm-gantt-grid"
+                role="table"
+                aria-label="Proje Gant şeması"
+                [style.--gantt-month-count]="ganttMonths().length || 1"
+                [style.--gantt-grid-min-width]="ganttGridMinWidth() + 'px'"
+              >
+                <div class="pm-gantt-header" role="row">
+                  <div class="pm-gantt-project-heading" role="columnheader">Proje Adı <span>⇅</span></div>
+                  @for (month of ganttMonths(); track month) {
+                    <div class="pm-gantt-month" role="columnheader">{{ month }}</div>
+                  }
+                </div>
+
+                @for (row of ganttRows(); track row.id) {
+                  <section class="pm-gantt-project" [class.is-expanded]="expandedGanttRows().has(row.id)">
+                    <div class="pm-gantt-row" role="row">
+                      <div class="pm-gantt-name" role="cell">
+                        <strong>{{ row.name }}</strong>
+                        <button
+                          type="button"
+                          [class.is-loading]="row.tasksLoading"
+                          [attr.aria-label]="row.name + (expandedGanttRows().has(row.id) ? ' görevlerini gizle' : ' görevlerini göster')"
+                          [attr.aria-expanded]="expandedGanttRows().has(row.id)"
+                          (click)="toggleGanttRow(row.id)"
+                        >
+                          <app-icon [name]="expandedGanttRows().has(row.id) ? 'chevron-down' : 'chevron-right'" [size]="12" />
+                        </button>
+                      </div>
+                      <div
+                        class="pm-gantt-timeline"
+                        role="cell"
+                        [style.--bar-start]="row.start + '%'"
+                        [style.--bar-width]="row.width + '%'"
+                        [style.--bar-color]="row.color"
+                      >
+                        @for (month of ganttMonths(); track month) { <span class="pm-gantt-slot" aria-hidden="true"></span> }
+                        <span class="pm-gantt-bar">{{ row.label }}</span>
+                      </div>
+                    </div>
+
+                    @if (expandedGanttRows().has(row.id)) {
+                      <div class="pm-gantt-subtasks" aria-label="Alt görevler">
+                        @if (row.tasksLoading) {
+                          <div class="pm-gantt-task-state" role="status">
+                            <span class="pm-gantt-task-spinner"></span>
+                            <span>Görevler yükleniyor…</span>
+                          </div>
+                        } @else if (row.tasksLoadFailed) {
+                          <div class="pm-gantt-task-state pm-gantt-task-state--error" role="alert">
+                            <span>Görevler yüklenemedi.</span>
+                            <button type="button" (click)="retryGanttTasks(row.id, $event)">Yeniden dene</button>
+                          </div>
+                        } @else if (row.tasksLoaded && !row.tasks.length) {
+                          <div class="pm-gantt-task-state">
+                            <span>Bu projede henüz görev bulunmuyor.</span>
+                          </div>
+                        } @else {
+                          @for (task of row.tasks; track task.id) {
+                            <div class="pm-gantt-row pm-gantt-row--task" role="row">
+                              <div
+                                class="pm-gantt-name pm-gantt-name--task"
+                                role="cell"
+                                [style.--task-indent]="(task.depth > 3 ? 3 : task.depth) * 0.75 + 'rem'"
+                                [attr.title]="task.groupTitle + ' · ' + ganttTaskStatusLabel(task.status)"
+                              >
+                                <i
+                                  class="pm-gantt-task-status"
+                                  [class.is-progress]="task.status === 'InProgress'"
+                                  [class.is-done]="task.status === 'Done'"
+                                  aria-hidden="true"
+                                ></i>
+                                <span>{{ task.name }}</span>
+                              </div>
+                              <div
+                                class="pm-gantt-timeline"
+                                role="cell"
+                                [style.--bar-start]="task.start + '%'"
+                                [style.--bar-width]="task.width + '%'"
+                                [style.--bar-color]="row.color"
+                              >
+                                @for (month of ganttMonths(); track month) { <span class="pm-gantt-slot" aria-hidden="true"></span> }
+                                @if (task.scheduled) {
+                                  <span class="pm-gantt-bar pm-gantt-bar--task" [class.is-done]="task.status === 'Done'">{{ task.label }}</span>
+                                } @else {
+                                  <span class="pm-gantt-unscheduled">Tarih planlanmadı</span>
+                                }
+                              </div>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  </section>
+                }
+              </div>
+            </div>
+
+            <footer class="pm-footer">
+              <span>Son Giriş: 06.03.2024 12:33</span>
+              <nav aria-label="Yardım bağlantıları">
+                <button type="button">Hakkımızda</button>
+                <button type="button">SSS</button>
+                <button type="button">Çözüm Merkezi</button>
+              </nav>
+              <span>Versions&nbsp;&nbsp; 4.50</span>
+            </footer>
+          </div>
+        }
+      </section>
+    </div>
+  </section>
+
+  @if (pendingDeleteProject(); as project) {
+    <div class="pm-confirm-layer" (click)="cancelDeleteProject()">
+      <div class="pm-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-project-title" (click)="$event.stopPropagation()">
+        <h2 id="delete-project-title">Projeyi sil</h2>
+        <p>
+          <strong>{{ project.name }}</strong> projesini kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri
+          alınamaz; projeye ait görevler ve dokümanlar da erişilemez hale gelir.
+        </p>
+        <footer>
+          <button type="button" class="pm-confirm-cancel" (click)="cancelDeleteProject()">Vazgeç</button>
+          <button type="button" class="pm-confirm-danger" [disabled]="deletingProject()" (click)="confirmDeleteProject()">
+            {{ deletingProject() ? 'Siliniyor…' : 'Sil' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (columnDialogOpen()) {
+    <div class="pm-confirm-layer" (click)="closeBoardColumnDialog()">
+      <form class="pm-confirm pm-board-column-dialog" (submit)="$event.preventDefault(); saveBoardColumn()" (click)="$event.stopPropagation()">
+        <h2>{{ editingBoardColumn() ? 'Pano sütununu düzenle' : 'Yeni pano sütunu' }}</h2>
+        <p>Bu sütun ve içerisindeki kartların sırası panoyu görüntüleyen herkes için ortak olacaktır.</p>
+        <label>
+          <span>Sütun adı</span>
+          <input
+            type="text"
+            maxlength="100"
+            [value]="columnNameDraft()"
+            (input)="columnNameDraft.set($any($event.target).value)"
+            placeholder="Örn. Oteller"
+            autofocus
+          />
+        </label>
+        <label class="pm-board-color-field">
+          <span>Sütun rengi</span>
+          <input type="color" [value]="columnColorDraft()" (input)="columnColorDraft.set($any($event.target).value)" />
+          <code>{{ columnColorDraft() }}</code>
+        </label>
+        @if (columnFormError()) { <p class="pm-board-column-error">{{ columnFormError() }}</p> }
+        <footer>
+          <button type="button" class="pm-confirm-cancel" (click)="closeBoardColumnDialog()">Vazgeç</button>
+          <button type="submit" class="pm-board-dialog-save" [disabled]="savingBoardColumn()">
+            {{ savingBoardColumn() ? 'Kaydediliyor…' : 'Kaydet' }}
+          </button>
+        </footer>
+      </form>
+    </div>
+  }
+
+  @if (pendingDeleteBoardColumn(); as column) {
+    <div class="pm-confirm-layer" (click)="cancelDeleteBoardColumn()">
+      <div class="pm-confirm pm-board-column-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-board-column-title" (click)="$event.stopPropagation()">
+        <h2 id="delete-board-column-title">Pano sütununu kaldır</h2>
+        <p><strong>{{ column.title }}</strong> sütunu kaldırılacak.</p>
+        @if (boardColumnProjectCount(column.id) > 0) {
+          <label>
+            <span>{{ boardColumnProjectCount(column.id) }} projenin taşınacağı sütun</span>
+            <select [value]="deleteTargetColumnId()" (change)="deleteTargetColumnId.set($any($event.target).value)">
+              <option value="">Hedef sütun seçin</option>
+              @for (target of boardColumns(); track target.key) {
+                @if (target.id && target.id !== column.id) {
+                  <option [value]="target.id">{{ target.title }}</option>
+                }
+              }
+            </select>
+          </label>
+        }
+        <footer>
+          <button type="button" class="pm-confirm-cancel" (click)="cancelDeleteBoardColumn()">Vazgeç</button>
+          <button type="button" class="pm-confirm-danger" [disabled]="deletingBoardColumn()" (click)="confirmDeleteBoardColumn()">
+            {{ deletingBoardColumn() ? 'Kaldırılıyor…' : 'Sütunu Kaldır' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</main>

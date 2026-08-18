@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ozdilek.PM.AIGatewayService.Domain\Ozdilek.PM.AIGatewayService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\Ozdilek.PM.Contracts\Ozdilek.PM.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Ozdilek.PM.SharedKernel\Ozdilek.PM.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
